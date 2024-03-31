@@ -1,10 +1,7 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
-type Attributes = Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>;
-
-const VALID_PROTO = /^(http|https|ssh|ftp|sftp|gopher):\/\//i;
-const ObjectPrototype = Object.getPrototypeOf({});
-const SPLIT_TAG_NAME = /([\.\#])([^\.\#]+)/g
+import type { Attributes } from './types.mts';
+import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME } from './types.mts';
 
 // export function safe_uri(x: string) { return {content: x, type: "Safe"}; }
 export function is_func(x: unknown) { return typeof x === "function"; }

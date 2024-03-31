@@ -1,5 +1,7 @@
 import { assert } from 'chai';
 import { element as E, body, form_data, is_urlish, is_plain_object, split_tag_name } from '../src/index.mts';
+import { element as BE, html5 } from '../src/bsr.mts';
+// import { describe } from 'node:test';
 
 describe('helper functions', function () {
   describe('is_urlish', function () {
@@ -106,5 +108,45 @@ describe('form_data', function () {
       )
     );
     assert.deepEqual(data, {msg: ['hello1', 'hello2']});
+  });
+});
+
+describe('Build Side Rendering', function () {
+  describe('element', function () {
+    it('.to_html returns an HTML string', function () {
+      const html = BE('span', 'hello');
+      assert.equal(html.to_html(), '<span>hello</span>');
+    });
+    it('.to_html escapes tags', function () {
+      const html = BE('span', `<script>hello</script>`);
+      assert.equal(html.to_html(), '<span>&lt;script&gt;hello&lt;/script&gt;</span>');
+    });
+    it('.to_html escapes quotation marks', function () {
+      const html = BE('span', `"hello'`);
+      assert.equal(html.to_html(), '<span>&quot;hello&#39;</span>');
+    });
+    it('.to_html renders attributes', function () {
+      const html = BE('html', {lang: 'en'});
+      assert.equal(html.to_html(), '<html lang="en"></html>');
+    });
+
+    it('.to_html does not render closing tags for void elements', function () {
+      const html = BE('body', BE('meta'), BE('link'), BE('img'));
+      assert.equal(html.to_html(), '<body><meta><link><img></body>');
+    });
+  });
+
+  describe('html5', function () {
+    it('returns a string with a doctype', function () {
+      const html = html5(
+        BE('html',
+          BE('head',
+            BE('title', 'hello')
+          ),
+          BE('body')
+        )
+      );
+      assert.equal(html, `<!DOCTYPE html>\n<html><head><title>hello</title></head><body></body></html>`)
+    });
   });
 });

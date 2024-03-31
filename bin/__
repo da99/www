@@ -28,7 +28,7 @@ case "$*" in
     set -x
     rm -rf build
     mkdir build
-    bun build spec/test.js --outdir build
+    bun build --target browser spec/test.js --outdir build
     ;;
   "serve test")
     set -x
