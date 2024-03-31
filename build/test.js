@@ -9145,7 +9145,7 @@ describe("Build Side Rendering", function() {
     });
     it(".to_html does not render closing tags for void elements", function() {
       const html = element2("body", element2("meta"), element2("link"), element2("img"));
-      assert.equal(html.to_html(), "<body><meta><link><img</body>");
+      assert.equal(html.to_html(), "<body><meta><link><img></body>");
     });
   });
   describe("html5", function() {
