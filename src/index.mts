@@ -141,7 +141,7 @@ async function handle_form_response(resp: Response) {
 /*
   * This is also used for CSRF protection.
 */
-export const X_SENT_FROM = "X-Sent-From";
+export const X_SENT_FROM = "X_SENT_FROM";
 
 function handle_form_post(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   ev.preventDefault();
@@ -153,11 +153,12 @@ function handle_form_post(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
   }
 
-  const action = form.getAttribute('action');
+  const action = form.getAttribute('action') || '/unknown';
   const headers = {
     "Content-Type": "application/json",
+    X_SENT_FROM: form.getAttribute('id') || "[NONE]"
   };
-  headers[X_SENT_FROM] = form.getAttribute('id') || "[NONE]";
+  // headers[X_SENT_FROM] = form.getAttribute('id') || "[NONE]";
 
   console.warn(headers);
   fetch(action, {
