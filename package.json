@@ -3,8 +3,7 @@
     "@types/bun": "latest",
     "@types/node": "latest",
     "chai": "latest",
-    "lodash": "^4.17.21",
+    "lodash": "latest",
     "mocha": "latest"
-  },
-  "dependencies": { "sanitize-html": "^2.13.0" }
+  }
 }
