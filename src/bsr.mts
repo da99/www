@@ -50,10 +50,10 @@ class BElement {
     let html = `<${this.tagname}`;
     //` id=${this.tagid} class=${this.classList.join(' ')}`;
     if (this.classList.length > 0) {
-      html += ` class="${this.classList.join(' ')}"`;
+      html += ` class="${this.classList.map(x => lodash.escape(x)).join(' ')}"`;
     }
     for (const k in this.attrs) {
-      html += ` ${k}="${this.attrs[k as keyof Attributes]}"`
+      html += ` ${k}="${lodash.escape(this.attrs[k as keyof Attributes])}"`
     } // for
     html += '>';
 
