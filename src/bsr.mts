@@ -6,14 +6,14 @@
   */
 
 import lodash from 'lodash';
-import type { Attributes } from './types.mts';
+import type { Attributes } from './base.mts';
 // import sanitizeHtml from 'sanitize-html';
 
 import {
   split_tag_name,
   is_plain_object,
   is_void_tagname
-} from './types.mts';
+} from './base.mts';
 
 type BChild = string | BElement
 

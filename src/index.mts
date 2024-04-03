@@ -1,7 +1,7 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 import type { Attributes } from './types.mts';
-import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME_PATTERN } from './types.mts';
+import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME_PATTERN } from './base.mts';
 
 // export function safe_uri(x: string) { return {content: x, type: "Safe"}; }
 export function is_func(x: unknown) { return typeof x === "function"; }

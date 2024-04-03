@@ -2,7 +2,7 @@
 export type Attributes = Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>;
 export const VALID_PROTO = /^(http|https|ssh|ftp|sftp|gopher):\/\//i;
 export const ObjectPrototype = Object.getPrototypeOf({});
-export const SPLIT_TAG_NAME_VALID_PATTERN = /\A(a-z)([\.\#][a-z0-9\_]+)\Z/
+export const SPLIT_TAG_NAME_VALID_PATTERN = /^([a-z]+)([\.\#][a-z0-9\_]+)*$/
 export const SPLIT_TAG_NAME_PATTERN = /([\.\#])/g
 export const ALLOWED_TAGS: any = {
   p: true,
@@ -56,8 +56,10 @@ export function is_void_tagname(x: string) {
 } // func
 
 export function split_tag_name(new_class: string) {
-  if (new_class.match(SPLIT_TAG_NAME_VALID_PATTERN))
+    // console.warn(new_class);
+  if (!new_class.match(SPLIT_TAG_NAME_VALID_PATTERN)) {
     throw new Error(`Invalid characters in new element: ${new_class}`);
+  }
 
   let curr = '';
   let tagname = 'unknown';

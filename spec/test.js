@@ -1,7 +1,7 @@
 import { assert } from 'chai';
 import { element as E, body, form_data, is_urlish, is_plain_object, split_tag_name } from '../src/index.mts';
 import { element as BE, html5 } from '../src/bsr.mts';
-import { allow_tags } from '../src/types.mts';
+import { allow_tags } from '../src/base.mts';
 // import { describe } from 'node:test';
 
 allow_tags('html', 'head', 'meta', 'body', 'link', 'img', 'title');
@@ -117,13 +117,15 @@ describe('form_data', function () {
 describe('Build Side Rendering', function () {
   describe('element', function () {
     it('throws if #id is not: a-z 0-9 _', function () {
-      assert.throws(function () {}, "Invalid characters for p id: \"")
-      const html = BE('p#hel"lp', 'spacer');
+      assert.throws(function () {
+        BE('p#hel"lp', 'spacer');
+      }, `Invalid characters in new element: p#hel"lp`)
     });
 
     it('throws if .class is not: a-z 0-9 _', function () {
-      assert.throws(function () {}, "Invalid characters for p class: \"")
-      const html = BE('p.he"p', 'spacer');
+      assert.throws(function () {
+        BE('p.he"p', 'spacer');
+      }, `Invalid characters in new element: p.he"p`)
     });
 
     it('.to_html returns an HTML string', function () {
