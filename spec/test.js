@@ -113,18 +113,31 @@ describe('form_data', function () {
 
 describe('Build Side Rendering', function () {
   describe('element', function () {
+    it('throws if #id is not: a-z 0-9 _', function () {
+      assert.throws(function () {}, "Invalid characters for p id: \"")
+      const html = BE('p#hel"lp', 'spacer');
+    });
+
+    it('throws if .class is not: a-z 0-9 _', function () {
+      assert.throws(function () {}, "Invalid characters for p class: \"")
+      const html = BE('p.he"p', 'spacer');
+    });
+
     it('.to_html returns an HTML string', function () {
       const html = BE('span', 'hello');
       assert.equal(html.to_html(), '<span>hello</span>');
     });
+
     it('.to_html escapes tags', function () {
       const html = BE('span', `<script>hello</script>`);
       assert.equal(html.to_html(), '<span>&lt;script&gt;hello&lt;/script&gt;</span>');
     });
+
     it('.to_html escapes quotation marks', function () {
       const html = BE('span', `"hello'`);
       assert.equal(html.to_html(), '<span>&quot;hello&#39;</span>');
     });
+
     it('.to_html renders attributes', function () {
       const html = BE('html', {lang: 'en'});
       assert.equal(html.to_html(), '<html lang="en"></html>');
@@ -134,6 +147,17 @@ describe('Build Side Rendering', function () {
       const html = BE('body', BE('meta'), BE('link'), BE('img'));
       assert.equal(html.to_html(), '<body><meta><link><img></body>');
     });
+
+    // it('.to_html escapes quotes in the class attribute', function () {
+    //   const html = BE('a.he"lo', 'hello');
+    //   assert.equal(html.to_html(), '<a class="he&quot;lo">hello</a>');
+    // });
+
+    it('.to_html escapes quotes in any attribute', function () {
+      const html = BE('p', {bob: "hel'lo"});
+      assert.equal(html.to_html(), '<p bob="hel&#39;lo"></p>');
+    });
+
   });
 
   describe('html5', function () {

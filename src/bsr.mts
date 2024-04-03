@@ -10,7 +10,7 @@ import type { Attributes } from './types.mts';
 // import sanitizeHtml from 'sanitize-html';
 
 import {
-  SPLIT_TAG_NAME,
+  split_tag_name,
   is_plain_object,
   is_void_tagname
 } from './types.mts';
@@ -112,39 +112,7 @@ export function element(tag_name: string, ...pieces : (BChild | Attributes)[]) {
 //   document.body.append(fragment(...eles));
 //   return document.body;
 // }
-//
-export function split_tag_name(new_class: string) {
-  let curr = '';
-  let tagname = 'unknown';
-  const classList: string[] = [];
-  let tagid = undefined;
-  for (const s of new_class.split(SPLIT_TAG_NAME) ) {
-    switch (s) {
-      case '.':
-      case '#':
-        curr = s;
-        break;
-      case '':
-        // ignore
-        break;
-      default:
-        switch (curr) {
-        case '.':
-          classList.push(s);
-          break;
-        case '#':
-          tagid = s;
-          break;
-        default:
-          tagname = s;
-      }
-    }
-  }
 
-  if (tagname == 'unknown')
-    throw `Invalid syntax for element creation: ${new_class}`;
-  return {tagname, classList, tagid};
-} // func
 
 // html5(
 //   e('html', {lang: 'en'},
