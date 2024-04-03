@@ -9,11 +9,13 @@ export const ALLOWED_TAGS: any = {
   a: true,
   div: true,
   form: true,
+  span: true
 };
 
-export function allow_tag(x: keyof HTMLElementTagNameMap) {
-  ALLOWED_TAGS[x] = true;
-  return x;
+export function allow_tags(...tags: (keyof HTMLElementTagNameMap)[]) {
+  for (const x of tags)
+    ALLOWED_TAGS[x] = true;
+  return true;
 }
 
 // export function safe_uri(x: string) { return {content: x, type: "Safe"}; }

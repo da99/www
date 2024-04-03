@@ -34,7 +34,7 @@ export function body(...eles: (string | Element)[]) {
 export function split_tag_name(new_class: string): Element {
   let e: Element | null = null;
   let curr = '';
-  for (const s of new_class.split(SPLIT_TAG_NAME) ) {
+  for (const s of new_class.split(SPLIT_TAG_NAME_PATTERN) ) {
     switch (s) {
       case '.':
       case '#':
