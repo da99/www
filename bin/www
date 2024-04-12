@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -u -e -o pipefail
+
 THIS_DIR="$(dirname "$0")/.."
 #
 # Color_Off='\e[0m'
@@ -12,6 +14,15 @@ THIS_DIR="$(dirname "$0")/.."
 # Orange='\e[0;33m'
 # BOrange='\e[1;33m'
 
+ensure_build_dir() {
+  case "$PWD/" in
+    */build/*) : ;;
+    *)
+      echo "!!! Not in a build directory: $PWD" >&2
+      exit 1
+      ;;
+  esac
+}
 case "$*" in
   --help|help|-h)
   cmd="$(basename "$0")"
@@ -21,7 +32,7 @@ case "$*" in
   echo "     Updates the \"public_files\" Array in settings.json"
   echo "$cmd upload to bucket"
   echo "$cmd prune files"
-  echo "$cmd build mjs"
+  echo "$cmd build mjs|css|html"
   echo "$cmd serve"
   echo "$cmd list old|new files"
   ;;
@@ -38,14 +49,36 @@ case "$*" in
     "$THIS_DIR"/src/PublicFile.rb "$@"
     ;;
 
+  'build css')
+    ensure_build_dir
+    while read -r LINE ; do
+      case "$LINE" in
+        *section/base/*)
+          echo "--- Skipping: $LINE"
+          ;;
+        *)
+          echo "--- Processing .css: $LINE"
+          set -x
+          bun x lightningcss --minify --bundle "$LINE" -o "$LINE".tmp
+          set +x
+          mv "$LINE".tmp "$LINE"
+          ;;
+      esac
+    done < <( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.css')
+    ;;
+
+  'build html')
+    ensure_build_dir;
+    while read -r LINE ; do
+      new_file=${LINE/.html.mts/.html}
+      echo "--- Processing html: $new_file"
+      bun run "$LINE" > "$new_file"
+      rm "$LINE"
+    done < <( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.html.mts')
+    ;;
+
   'build mjs')
-    case "$PWD/" in
-      */build/*) : ;;
-      *)
-        echo "!!! Not in a build directory: $PWD" >&2
-        exit 1
-        ;;
-    esac
+    ensure_build_dir;
     # "$THIS_DIR"/src/PublicFile.rb build mjs
     set -x
     index_mts=$( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.mts' -and -not -iname '*.html.mts')

@@ -12,7 +12,8 @@ import type { Attributes } from './base.mts';
 import {
   split_tag_name,
   is_plain_object,
-  is_void_tagname
+  is_void_tagname,
+  allow_tags
 } from './base.mts';
 
 type BChild = string | BElement
@@ -95,6 +96,13 @@ export function element(tag_name: string, ...pieces : (BChild | Attributes)[]) {
   return new BElement(tag_name, attrs || {}, eles );
 } // export function
 
+allow_tags(
+  'meta', 'link', 'title', 'head', 'script', 'body',
+  'main', 'footer', 'form', 'fieldset', 'label', 'input',
+  'button'
+);
+
+export {allow_tags};
 
 // export function fragment(...eles: (string | Element)[]) {
 //   let dom_fragment = document.createDocumentFragment();

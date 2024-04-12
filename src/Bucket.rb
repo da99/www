@@ -2,7 +2,6 @@
 # frozen_string_literal: true
 
 require_relative './PublicFile'
-require_relative './Template'
 require 'json'
 
 # Manage a files for a Bucket.
@@ -55,10 +54,9 @@ if $PROGRAM_NAME == __FILE__
     b = Bucket.new(settings)
     b.upload
 
-  when 'write file manifest'
+  when 'update file manifest'
     j = JSON.parse(File.read('settings.json'))
     PublicFile.write_manifest(j)
-
 
   else
     warn "!!! Unknown command: #{cmd}"
