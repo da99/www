@@ -126,8 +126,8 @@ if $PROGRAM_NAME == __FILE__
     else
       puts "--- Setting #{dir} to https://#{domain}..."
     end
-    files.each do |raw|
-      origin = File.read(raw)
+    files.each do |raw_file|
+      origin = File.read(raw_file)
       new_body = origin.gsub(/(src|href)="([^"]+)"/) do |match|
         attr = Regexp.last_match(1)
         new_val = manifest[Regexp.last_match(2)]
@@ -136,14 +136,16 @@ if $PROGRAM_NAME == __FILE__
         else
           match
         end
-      end # .gsub
-      if origin == new_body
-        warn "--- Skipping: #{raw}"
-          next
       end
-      warn "=== Updated: #{raw}"
-        File.write(raw, new_body)
-    end # files.each
+      # ====origin.gsub
+      if origin == new_body
+        warn "--- Skipping: #{raw_file}"
+        next
+      end
+      warn "=== Updated: #{raw_file}"
+      File.write(raw_file, new_body)
+    end
+    # === files.each
 
   else
     warn "!!! Unknown command: #{cmd}"

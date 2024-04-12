@@ -15,20 +15,22 @@ THIS_DIR="$(dirname "$0")/.."
 case "$*" in
   --help|help|-h)
   cmd="$(basename "$0")"
-  echo "$cmd upload to bucket"
   echo "$cmd setup bucket"
-  echo "$cmd write file manifest"
+  echo "     Create the sqlite database to remember uploaded/pruned public files."
+  echo "$cmd update file manifest"
+  echo "     Updates the \"public_files\" Array in settings.json"
+  echo "$cmd upload to bucket"
+  echo "$cmd prune files"
   echo "$cmd build mjs"
   echo "$cmd serve"
   echo "$cmd list old|new files"
-  echo "$cmd prune files"
   ;;
 
   "upload to bucket"|"setup bucket")
     bun run "$THIS_DIR"/src/Public_File.mts "$@"
   ;;
 
-  "write file manifest")
+  "update file manifest")
     "$THIS_DIR"/src/Bucket.rb "$@"
   ;;
 
@@ -37,7 +39,25 @@ case "$*" in
     ;;
 
   'build mjs')
-    "$THIS_DIR"/src/PublicFile.rb build mjs
+    case "$PWD/" in
+      */build/*) : ;;
+      *)
+        echo "!!! Not in a build directory: $PWD" >&2
+        exit 1
+        ;;
+    esac
+    # "$THIS_DIR"/src/PublicFile.rb build mjs
+    set -x
+    index_mts=$( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.mts' -and -not -iname '*.html.mts')
+    # index_mts=$( echo public/section/**/*.html.mts )
+    bun build \
+      --target browser \
+      --outdir "$PWD"/public/section \
+      --splitting \
+      --chunk-naming "[dir]/[name].mjs" \
+      --entry-naming "[dir]/[name].mjs" \
+      $index_mts
+    rm $index_mts
   ;;
 
   'list new files'|'list old files')
