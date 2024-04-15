@@ -178,3 +178,23 @@ export function form_post(b: Element) {
   b.addEventListener('click', handle_form_post);
   return b;
 } // export function
+
+export function setup_events() {
+  document.querySelectorAll('body').forEach((ele) => {
+    ele.addEventListener('click', function (ev: MouseEvent) {
+      console.warn(`Event type: ${ev.type}`);
+      const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
+      switch (ele) {
+        case 'A':
+          break;
+        case 'BUTTON':
+          const button = ele as HTMLButtonElement;
+          if (button.classList.contains('submit')) {
+            ev.preventDefault();
+            console.warn('You are submitting this form')
+          }
+          break;
+      }
+    })
+  });
+} // export function
