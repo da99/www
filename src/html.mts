@@ -143,7 +143,31 @@ async function handle_form_response(resp: Response) {
 */
 export const X_SENT_FROM = "X_SENT_FROM";
 
-function handle_form_post(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
+export function update_id_count() {
+  let current_id_count =  document.body.getAttribute('data-id-count') || "-1";
+  const new_id = parseInt(current_id_count) + 1;
+  document.body.setAttribute('data-id-count', new_id.toString());
+  return new_id;
+}
+
+// Gets id attribute of element.
+// Creates an id if it is missing.
+export function get_id(e: HTMLElement): string {
+  const id = e.getAttribute('id');
+  if (id)
+    return id;
+  const new_id = `${e.tagName}_${update_id_count()}`
+  e.setAttribute('id', new_id);
+  return new_id;
+}
+
+function full_url(x: string): string {
+  const url = new URL(location.toString());
+  url.pathname = x;
+  return url.toString();
+}
+
+function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   ev.preventDefault();
   ev.stopPropagation();
   const e = ev.target as HTMLElement;
@@ -153,48 +177,60 @@ function handle_form_post(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
   }
 
-  const action = form.getAttribute('action') || '/unknown';
-  const headers = {
-    "Content-Type": "application/json",
-    X_SENT_FROM: form.getAttribute('id') || "[NONE]"
-  };
-  // headers[X_SENT_FROM] = form.getAttribute('id') || "[NONE]";
+  const action = form.getAttribute('action');
+  if (!action)
+    throw new Error(`action attribute not set for ${get_id(form)}`);
 
-  console.warn(headers);
-  fetch(action, {
+  const full_action = full_url( action );
+
+  // const headers = ;
+  // headers[X_SENT_FROM] = form.getAttribute('id') || "[NONE]";
+  const f_request: FetchRequestInit = {
     method: "POST",
     referrerPolicy: "no-referrer",
     cache: "no-cache",
-    headers: headers,
+    headers: {
+      "Content-Type": "application/json",
+      X_SENT_FROM: get_id(form)
+    },
     body: JSON.stringify(form_data(form))
-  })
+  };
+
+  const detail = {request: f_request, element: form, do_request: true}
+  document.body.dispatchEvent(new CustomEvent('request', {detail}));
+
+  if (!detail.do_request)
+    return false;
+
+  fetch(full_action, f_request)
   .then(handle_form_response)
   .catch(handle_form_fetch_error);
-
-  return false;
+  return true;
 }
 
 export function form_post(b: Element) {
-  b.addEventListener('click', handle_form_post);
+  b.addEventListener('click', submit_form);
   return b;
 } // export function
 
+function handle_body_click(ev: MouseEvent) {
+  console.warn(`Event type: ${ev.type}`);
+  const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
+  switch (ele) {
+    case 'A':
+      break;
+    case 'BUTTON':
+      const button = ele as HTMLButtonElement;
+    if (button.classList.contains('submit')) {
+      ev.preventDefault();
+      console.warn('You are submitting this form')
+    }
+    break;
+  }
+} // === function
+
 export function setup_events() {
-  document.querySelectorAll('body').forEach((ele) => {
-    ele.addEventListener('click', function (ev: MouseEvent) {
-      console.warn(`Event type: ${ev.type}`);
-      const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
-      switch (ele) {
-        case 'A':
-          break;
-        case 'BUTTON':
-          const button = ele as HTMLButtonElement;
-          if (button.classList.contains('submit')) {
-            ev.preventDefault();
-            console.warn('You are submitting this form')
-          }
-          break;
-      }
-    })
+  document.querySelectorAll('body').forEach((body) => {
+    body.addEventListener('click', handle_body_click);
   });
 } // export function
