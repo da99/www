@@ -119,33 +119,6 @@ export function form_data(f: HTMLFormElement) {
   return data;
 } // export function
 
-function fetch_error(error: any) {
-  console.warn(error);
-  console.warn(`Form fetch error: ${error.message}`);
-}
-
-async function fetch_response(resp: Response) {
-  if (!resp.ok) {
-    console.warn(`Form response error: ${resp.status} - ${resp.statusText}`);
-    return fetch_error({message: `Server returned with error.`, response: resp});
-  }
-  console.warn(`Form response: ${resp.status}`);
-
-  const json = await resp.json();
-
-  if (!json[X_SENT_FROM]) {
-    console.warn(`Target not found: ${json}`);
-    return json;
-  }
-
-  console.warn('response:');
-  console.warn(json);
-  document.querySelectorAll(`#${json[X_SENT_FROM]}`).forEach((e) => {
-    e.dispatchEvent(new CustomEvent("response", {detail: {response: json}}));
-  });
-  return json;
-}
-
 /*
   * This is also used for CSRF protection.
 */
@@ -178,10 +151,10 @@ function full_url(x: string): string {
 function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   ev.preventDefault();
   ev.stopPropagation();
-  const e = ev.target as HTMLElement;
-  const form = e.closest('form');
+  const button = ev.target as HTMLElement;
+  const form = button.closest('form');
   if (!form) {
-    console.warn('Form not found for: ' + e.tagName);
+    console.warn('Form not found for: ' + button.tagName);
     return false;
   }
 
@@ -211,34 +184,74 @@ function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
 
   fetch(full_action, f_request)
-  .then(fetch_response)
-  .catch(fetch_error);
+  .then((x: Response) => { response(x, detail) })
+  .catch((x: any) => { request_error(x, detail) });
   return true;
-}
+} // === function submit_form
 
-export function form_post(b: Element) {
-  b.addEventListener('click', submit_form);
-  return b;
-} // export function
-
-function handle_body_click(ev: MouseEvent) {
+function body_click(ev: MouseEvent) {
   console.warn(`Event type: ${ev.type}`);
   const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
   switch (ele) {
     case 'A':
       break;
+
     case 'BUTTON':
       const button = ele as HTMLButtonElement;
-    if (button.classList.contains('submit')) {
+      if (!button.classList.contains('submit')) {
+        console.warn(`Unknown button type for: ${button}`)
+        return false;
+      }
       ev.preventDefault();
-      console.warn('You are submitting this form')
-    }
-    break;
+      console.warn('You are submitting this form');
+      return submit_form(ev);
   }
 } // === function
 
+async function response(resp: Response, origin: any) {
+  if (!resp.ok)
+    return request_reject(resp, origin);
+
+  console.warn(`Form response: ${resp.status}`);
+
+  const json = await resp.json();
+
+  if (!json[X_SENT_FROM]) {
+    console.warn(`Target not found: ${json}`);
+    return json;
+  }
+
+  console.warn('response:');
+  console.warn(json);
+  document.querySelectorAll(`#${json[X_SENT_FROM]}`).forEach((e) => {
+    e.dispatchEvent(new CustomEvent("response", {detail: {response: json}}));
+  });
+  return json;
+} // === function response
+
+function request_reject(resp: Response, origin: any) {
+  console.warn(`Form response error: ${resp.status} - ${resp.statusText}`);
+  const e = origin.element;
+  if (e as HTMLElement) {
+    document.querySelectorAll('body').forEach((e) => {
+      e.dispatchEvent(new CustomEvent("request-rejected", {detail: { response: resp, origin }}));
+    });
+  }
+} // === function request_reject
+
+function request_error(error: any, origin: any) {
+  console.warn(error);
+  console.warn(`Form fetch error message: ${error.message}`);
+  const e = origin.element;
+  if (e as HTMLElement) {
+    document.querySelectorAll('body').forEach((e) => {
+      e.dispatchEvent(new CustomEvent("request-error", {detail: {error, origin}}));
+    });
+  }
+} // === function request_reject
+
 export function setup_events() {
   document.querySelectorAll('body').forEach((body) => {
-    body.addEventListener('click', handle_body_click);
+    body.addEventListener('click', body_click);
   });
 } // export function
