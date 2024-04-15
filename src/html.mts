@@ -1,6 +1,6 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
-import type { Attributes } from './types.mts';
+import type { Attributes } from './base.mts';
 import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME_PATTERN } from './base.mts';
 
 // export function safe_uri(x: string) { return {content: x, type: "Safe"}; }
@@ -107,7 +107,7 @@ export function element(tag_name: string, ...pieces : (string | Element | Attrib
 
 export function form_data(f: HTMLFormElement) {
   const raw_data = new FormData(f);
-  const data = {};
+  const data: any = {};
   for (let [k,v] of raw_data.entries()) {
     if (data.hasOwnProperty(k)) {
       if(!Array.isArray(data[k]))
@@ -119,23 +119,31 @@ export function form_data(f: HTMLFormElement) {
   return data;
 } // export function
 
-function handle_form_fetch_error(error: any) {
+function fetch_error(error: any) {
+  console.warn(error);
   console.warn(`Form fetch error: ${error.message}`);
 }
 
-async function handle_form_response(resp: Response) {
+async function fetch_response(resp: Response) {
   if (!resp.ok) {
     console.warn(`Form response error: ${resp.status} - ${resp.statusText}`);
-    return false;
+    return fetch_error({message: `Server returned with error.`, response: resp});
   }
   console.warn(`Form response: ${resp.status}`);
+
   const json = await resp.json();
-  if (json.__target) {
-    console.warn(`         body: ${json}`);
-    document.getElementById(json.__target)?.dispatchEvent(new CustomEvent("formOK", {detail: json}));
-  } else {
+
+  if (!json[X_SENT_FROM]) {
     console.warn(`Target not found: ${json}`);
+    return json;
   }
+
+  console.warn('response:');
+  console.warn(json);
+  document.querySelectorAll(`#${json[X_SENT_FROM]}`).forEach((e) => {
+    e.dispatchEvent(new CustomEvent("response", {detail: {response: json}}));
+  });
+  return json;
 }
 
 /*
@@ -203,8 +211,8 @@ function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
 
   fetch(full_action, f_request)
-  .then(handle_form_response)
-  .catch(handle_form_fetch_error);
+  .then(fetch_response)
+  .catch(fetch_error);
   return true;
 }
 
