@@ -2,7 +2,7 @@
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 import type { Attributes } from './base.mts';
 import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME_PATTERN } from './base.mts';
-export type Custom_Event_Name = 'request' | 'request-error' | 'request-rejected' | 'response' | 'success' | 'rejected'
+export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'rejected'
 export type Custom_Event_Detail = {
   detail: any
 }
@@ -15,6 +15,12 @@ export const X_SENT_FROM = "X_SENT_FROM";
 export type JSON_Response = {
   success: boolean,
   X_SENT_FROM: string
+}
+
+export interface Rejected_Data extends JSON_Response {
+  fields: {
+    readonly [index: string]: string
+  }
 }
 
 function new_custom_event(name: Custom_Event_Name, detail: Custom_Event_Detail) {
@@ -52,7 +58,12 @@ export function form_clear_error(f: HTMLFormElement) {
 } // --- export function
 
 export function default_rejected(jr: JSON_Response) {
-  throw new Error('Not implemented: default_rejected')
+  if (!Object.hasOwn(jr, 'fields')) {
+    console.warn(`Fields key not set in JSON_Response.`);
+    return false;
+  }
+
+  const rd: Rejected_Data = jr as Rejected_Data;
 } // --- export function
 
 export function fragment(...eles: (string | Element)[]) {
@@ -222,14 +233,14 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
 
   fetch(full_action, f_request)
   .then((x: Response) => { response(x, detail) })
-  .catch((x: any) => { request_error(x, detail) });
+  .catch((x: any) => { network_error(x, detail) });
   return true;
 } // === function
 
 function body_click(ev: MouseEvent) {
-  console.warn(`Event type: ${ev.type}`);
+  console.log(`Event type: ${ev.type}`);
   const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
-  switch (ele) {
+  switch (ele.tagName) {
     case 'A':
       break;
 
@@ -239,17 +250,18 @@ function body_click(ev: MouseEvent) {
         console.warn(`Unknown button type for: ${button}`)
         return false;
       }
+      console.log('You are submitting this form');
       ev.preventDefault();
-      console.warn('You are submitting this form');
+      ev.stopPropagation();
       return form_submit(ev);
   }
 } // === function
 
 async function response(resp: Response, origin: any) {
   if (!resp.ok)
-    return response_rejected(resp, origin);
+    return server_error(resp, origin);
 
-  console.warn(`Fetch response: ${resp.status}`);
+  console.log(`Fetch response: ${resp.status}`);
 
   const json: JSON_Response = (await resp.json()) as JSON_Response;
 
@@ -258,8 +270,8 @@ async function response(resp: Response, origin: any) {
     return json;
   }
 
-  console.warn('response:');
-  console.warn(json);
+  console.log('response:');
+  console.log(json);
   const detail: Custom_Event_Detail = {detail: {response: json}};
   document.querySelectorAll('body').forEach((e) => {
     e.dispatchEvent(new_custom_event("response", detail));
@@ -278,23 +290,23 @@ async function response(resp: Response, origin: any) {
   return json;
 } // === function response
 
-function response_rejected(resp: Response, origin: any) {
-  console.warn(`Form response error: ${resp.status} - ${resp.statusText}`);
+function server_error(response: Response, origin: any) {
+  console.warn(`Form response error: ${response.status} - ${response.statusText}`);
   const e = origin.element;
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new_custom_event("request-rejected", {detail: { response: resp, origin }}));
+      e.dispatchEvent(new_custom_event("server-error", {detail: {response, origin}}));
     });
   }
 } // === function request_rejected
 
-function request_error(error: any, origin: any) {
+function network_error(error: any, origin: any) {
   console.warn(error);
   console.warn(`Form fetch error message: ${error.message}`);
   const e = origin.element;
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new_custom_event("request-error", {detail: {error, origin}}));
+      e.dispatchEvent(new_custom_event("network-error", {detail: {error, origin}}));
     });
   }
 } // === function request_reject
