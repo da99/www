@@ -2,6 +2,24 @@
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 import type { Attributes } from './base.mts';
 import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME_PATTERN } from './base.mts';
+export type Custom_Event_Name = 'request' | 'request-error' | 'request-rejected' | 'response' | 'success' | 'rejected'
+export type Custom_Event_Detail = {
+  detail: any
+}
+
+/*
+  * This is also used for CSRF protection.
+*/
+export const X_SENT_FROM = "X_SENT_FROM";
+
+export type JSON_Response = {
+  success: boolean,
+  X_SENT_FROM: string
+}
+
+function new_custom_event(name: Custom_Event_Name, detail: Custom_Event_Detail) {
+  return new CustomEvent(name, detail);
+}
 
 // export function safe_uri(x: string) { return {content: x, type: "Safe"}; }
 export function is_func(x: unknown) { return typeof x === "function"; }
@@ -13,6 +31,29 @@ export function is_urlish(x: unknown) {
 
   return VALID_PROTO.test(x.toLowerCase());
 } // func
+
+export function default_success(jr: JSON_Response) {
+   const e_id = jr.X_SENT_FROM;
+   document.querySelectorAll(`${e_id}`).forEach((e) => {
+     if (e.tagName === 'FORM')
+       form_reset(e as HTMLFormElement);
+   });
+} // --- export function
+
+export function form_reset(f: HTMLFormElement) {
+  f.reset();
+  form_clear_error(f);
+  return f;
+} // --- export function
+
+export function form_clear_error(f: HTMLFormElement) {
+  f.querySelectorAll('div.error')
+  return f;
+} // --- export function
+
+export function default_rejected(jr: JSON_Response) {
+  throw new Error('Not implemented: default_rejected')
+} // --- export function
 
 export function fragment(...eles: (string | Element)[]) {
   let dom_fragment = document.createDocumentFragment();
@@ -119,11 +160,6 @@ export function form_data(f: HTMLFormElement) {
   return data;
 } // export function
 
-/*
-  * This is also used for CSRF protection.
-*/
-export const X_SENT_FROM = "X_SENT_FROM";
-
 export function update_id_count() {
   let current_id_count =  document.body.getAttribute('data-id-count') || "-1";
   const new_id = parseInt(current_id_count) + 1;
@@ -148,7 +184,7 @@ function full_url(x: string): string {
   return url.toString();
 }
 
-function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
+function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   ev.preventDefault();
   ev.stopPropagation();
   const button = ev.target as HTMLElement;
@@ -178,7 +214,8 @@ function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   };
 
   const detail = {request: f_request, element: form, do_request: true}
-  document.body.dispatchEvent(new CustomEvent('request', {detail}));
+  document.body.dispatchEvent(new_custom_event('request', {detail}));
+  form_clear_error(form);
 
   if (!detail.do_request)
     return false;
@@ -187,7 +224,7 @@ function submit_form(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   .then((x: Response) => { response(x, detail) })
   .catch((x: any) => { request_error(x, detail) });
   return true;
-} // === function submit_form
+} // === function
 
 function body_click(ev: MouseEvent) {
   console.warn(`Event type: ${ev.type}`);
@@ -204,40 +241,52 @@ function body_click(ev: MouseEvent) {
       }
       ev.preventDefault();
       console.warn('You are submitting this form');
-      return submit_form(ev);
+      return form_submit(ev);
   }
 } // === function
 
 async function response(resp: Response, origin: any) {
   if (!resp.ok)
-    return request_reject(resp, origin);
+    return response_rejected(resp, origin);
 
-  console.warn(`Form response: ${resp.status}`);
+  console.warn(`Fetch response: ${resp.status}`);
 
-  const json = await resp.json();
+  const json: JSON_Response = (await resp.json()) as JSON_Response;
 
   if (!json[X_SENT_FROM]) {
-    console.warn(`Target not found: ${json}`);
+    console.warn(`#{X_SENT_FROM} key not found in response: ${Object.keys(json).join(', ')}`);
     return json;
   }
 
   console.warn('response:');
   console.warn(json);
-  document.querySelectorAll(`#${json[X_SENT_FROM]}`).forEach((e) => {
-    e.dispatchEvent(new CustomEvent("response", {detail: {response: json}}));
+  const detail: Custom_Event_Detail = {detail: {response: json}};
+  document.querySelectorAll('body').forEach((e) => {
+    e.dispatchEvent(new_custom_event("response", detail));
   });
+
+  if (json.success)
+    document.querySelectorAll('body').forEach((e) => {
+      e.dispatchEvent(new_custom_event("success", detail));
+      default_success(json);
+    });
+  else
+    document.querySelectorAll('body').forEach((e) => {
+      e.dispatchEvent(new_custom_event("rejected", detail));
+      default_rejected(json);
+    });
   return json;
 } // === function response
 
-function request_reject(resp: Response, origin: any) {
+function response_rejected(resp: Response, origin: any) {
   console.warn(`Form response error: ${resp.status} - ${resp.statusText}`);
   const e = origin.element;
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new CustomEvent("request-rejected", {detail: { response: resp, origin }}));
+      e.dispatchEvent(new_custom_event("request-rejected", {detail: { response: resp, origin }}));
     });
   }
-} // === function request_reject
+} // === function request_rejected
 
 function request_error(error: any, origin: any) {
   console.warn(error);
@@ -245,7 +294,7 @@ function request_error(error: any, origin: any) {
   const e = origin.element;
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new CustomEvent("request-error", {detail: {error, origin}}));
+      e.dispatchEvent(new_custom_event("request-error", {detail: {error, origin}}));
     });
   }
 } // === function request_reject
