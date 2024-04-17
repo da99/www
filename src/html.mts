@@ -38,12 +38,24 @@ export function is_urlish(x: unknown) {
   return VALID_PROTO.test(x.toLowerCase());
 } // func
 
-export function default_success(jr: JSON_Response) {
+export function default_success(origin: any, jr: JSON_Response) {
    const e_id = jr.X_SENT_FROM;
    document.querySelectorAll(`${e_id}`).forEach((e) => {
      if (e.tagName === 'FORM')
        form_reset(e as HTMLFormElement);
    });
+} // --- export function
+
+export function default_rejected(origin: any, jr: JSON_Response) {
+  if (!Object.hasOwn(jr, 'fields')) {
+    console.warn(`Fields key not set in JSON_Response.`);
+    return false;
+  }
+
+  const rd: Rejected_Data = jr as Rejected_Data;
+  for (const [f, msg] of Object.entries(rd.fields)) {
+    console.log(`${f} => ${msg}`);
+  }
 } // --- export function
 
 export function form_reset(f: HTMLFormElement) {
@@ -56,16 +68,6 @@ export function form_clear_error(f: HTMLFormElement) {
   f.querySelectorAll('div.error')
   return f;
 } // --- export function
-
-export function default_rejected(jr: JSON_Response) {
-  if (!Object.hasOwn(jr, 'fields')) {
-    console.warn(`Fields key not set in JSON_Response.`);
-    return false;
-  }
-
-  const rd: Rejected_Data = jr as Rejected_Data;
-} // --- export function
-
 export function fragment(...eles: (string | Element)[]) {
   let dom_fragment = document.createDocumentFragment();
   for (const x of eles) {
@@ -280,12 +282,12 @@ async function response(resp: Response, origin: any) {
   if (json.success)
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("success", detail));
-      default_success(json);
+      default_success(origin, json);
     });
   else
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("rejected", detail));
-      default_rejected(json);
+      default_rejected(origin, json);
     });
   return json;
 } // === function response
