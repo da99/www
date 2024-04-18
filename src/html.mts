@@ -229,6 +229,7 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
   }
 
+  form.classList.add('loading');
   const action = form.getAttribute('action');
   if (!action)
     throw new Error(`action attribute not set for ${get_id(form)}`);
@@ -282,6 +283,10 @@ function body_click(ev: MouseEvent) {
   }
 } // === function
 
+// function form_loading(e: HTMLElement) {
+//   e.classList.remove('loading');
+// }
+
 async function response(req: Request_Origin, raw_resp: Response) {
   if (!raw_resp.ok)
     return server_error(req, raw_resp);
@@ -294,6 +299,9 @@ async function response(req: Request_Origin, raw_resp: Response) {
     console.warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
     return resp;
   }
+
+  // form_loaded(req.element)
+  req.element.classList.remove('loading');
 
   console.log('response:');
   console.log(resp);
