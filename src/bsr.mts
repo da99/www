@@ -54,7 +54,13 @@ class BElement {
       html += ` class="${this.classList.map(x => lodash.escape(x)).join(' ')}"`;
     }
     for (const k in this.attrs) {
-      html += ` ${k}="${lodash.escape(this.attrs[k as keyof Attributes])}"`
+      let new_k = k;
+      switch (k.toLowerCase()) {
+        case 'htmlfor':
+          new_k = 'for';
+        break;
+      }
+      html += ` ${new_k}="${lodash.escape(this.attrs[k as keyof Attributes])}"`
     } // for
     html += '>';
 

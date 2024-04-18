@@ -44,7 +44,7 @@ export function default_success(_req: Request_Origin, resp: Response_Origin) {
    });
 } // --- export function
 
-export function default_rejected(_req: Request_Origin, resp: Response_Origin) {
+export function default_rejected(req: Request_Origin, resp: Response_Origin) {
   if (!Object.hasOwn(resp, 'fields')) {
     console.warn(`Fields key not set in JSON_Response.`);
     return false;
@@ -52,8 +52,25 @@ export function default_rejected(_req: Request_Origin, resp: Response_Origin) {
 
   for (const [f, msg] of Object.entries(resp.fields)) {
     console.log(`${f} => ${msg}`);
+    const label = req.element.querySelector(`label[for='${f}']`);
+    if (label) {
+      const fs = label.closest('fieldset');
+      if (fs) {
+        fs.append(document.createTextNode(english_error_msg(f, msg)));
+      }
+    }
   }
+
 } // --- export function
+
+export function english_error_msg(f: string, msg: string) {
+  switch (`${f} ${msg}`) {
+    case "email empty":
+      return `Email address can not be empty.`;
+    default:
+      return `${f.toUpperCase()} may not be ${msg}.`
+  }
+}
 
 export function form_reset(f: HTMLFormElement) {
   f.reset();
@@ -140,6 +157,7 @@ function set_attrs(ele: Element, attrs: any) {
   for (const k in attrs) {
     switch (k) {
       case 'htmlFor':
+      case 'htmlfor':
         ele.setAttribute('for', attrs[k]);
         break;
       case 'href':
