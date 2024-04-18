@@ -56,7 +56,15 @@ export function default_rejected(req: Request_Origin, resp: Response_Origin) {
     if (label) {
       const fs = label.closest('fieldset');
       if (fs) {
-        fs.append(document.createTextNode(english_error_msg(f, msg)));
+        const div_error = fs.querySelector('div.error');
+        const eng_msg = english_error_msg(f, msg);
+        if (div_error) {
+          if (div_error.textContent !== eng_msg) {
+            div_error.replaceChildren(document.createTextNode(eng_msg));
+          }
+        } else {
+          fs.append(element('div', {'class': 'error'}, eng_msg));
+        }
       }
     }
   }
