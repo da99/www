@@ -1,59 +1,56 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 import type { Attributes } from './base.mts';
-import { VALID_PROTO, ObjectPrototype, SPLIT_TAG_NAME_PATTERN } from './base.mts';
 export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'rejected'
-export type Custom_Event_Detail = {
-  detail: any
+
+export interface Custom_Event_Detail<T> {
+  detail: T
 }
 
-/*
-  * This is also used for CSRF protection.
-*/
-export const X_SENT_FROM = "X_SENT_FROM";
-
-export type JSON_Response = {
-  success: boolean,
-  X_SENT_FROM: string
+export interface Request_Origin {
+  readonly request: FetchRequestInit,
+  readonly element: HTMLElement,
+  do_request: boolean
 }
 
-export interface Rejected_Data extends JSON_Response {
-  fields: {
-    readonly [index: string]: string
+export interface Response_Origin {
+  readonly X_SENT_FROM: string,
+  readonly success: boolean,
+  readonly fields: {
+    [index: string]: string
   }
 }
 
-function new_custom_event(name: Custom_Event_Name, detail: Custom_Event_Detail) {
-  return new CustomEvent(name, detail);
+export interface Response_Detail {
+  request: Request_Origin,
+  response: Response_Origin,
+}
+
+/* This is also used for CSRF protection. */
+export const X_SENT_FROM = "X_SENT_FROM";
+
+import { is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
+
+function new_custom_event<T>(name: Custom_Event_Name, data: Custom_Event_Detail<T>) {
+  return new CustomEvent(name, data);
 }
 
 // export function safe_uri(x: string) { return {content: x, type: "Safe"}; }
-export function is_func(x: unknown) { return typeof x === "function"; }
-export function is_plain_object(x: unknown) { return typeof x === 'object' && Object.getPrototypeOf(x) === ObjectPrototype; }
-
-export function is_urlish(x: unknown) {
-  if (typeof x !== 'string')
-    return false;
-
-  return VALID_PROTO.test(x.toLowerCase());
-} // func
-
-export function default_success(origin: any, jr: JSON_Response) {
-   const e_id = jr.X_SENT_FROM;
+export function default_success(_req: Request_Origin, resp: Response_Origin) {
+   const e_id = resp.X_SENT_FROM;
    document.querySelectorAll(`${e_id}`).forEach((e) => {
      if (e.tagName === 'FORM')
        form_reset(e as HTMLFormElement);
    });
 } // --- export function
 
-export function default_rejected(origin: any, jr: JSON_Response) {
-  if (!Object.hasOwn(jr, 'fields')) {
+export function default_rejected(_req: Request_Origin, resp: Response_Origin) {
+  if (!Object.hasOwn(resp, 'fields')) {
     console.warn(`Fields key not set in JSON_Response.`);
     return false;
   }
 
-  const rd: Rejected_Data = jr as Rejected_Data;
-  for (const [f, msg] of Object.entries(rd.fields)) {
+  for (const [f, msg] of Object.entries(resp.fields)) {
     console.log(`${f} => ${msg}`);
   }
 } // --- export function
@@ -62,12 +59,13 @@ export function form_reset(f: HTMLFormElement) {
   f.reset();
   form_clear_error(f);
   return f;
-} // --- export function
+}
 
 export function form_clear_error(f: HTMLFormElement) {
   f.querySelectorAll('div.error')
   return f;
-} // --- export function
+}
+
 export function fragment(...eles: (string | Element)[]) {
   let dom_fragment = document.createDocumentFragment();
   for (const x of eles) {
@@ -116,7 +114,29 @@ export function split_tag_name(new_class: string): Element {
   return e;
 } // func
 
-function set_attrs(ele: Element, attrs: Attributes) {
+/*
+  * e('input', {name: "_something"}, "My Text")
+  * e('a.red#ID', {href: "https://some.url"}, "My Text")
+  * e('div', e('span', "My Text"))
+  * e('div#main', e('span', "My Text"))
+  * e('div#main',
+  *   e('span', "My Text"),
+  *   e('div', "My Text")
+  * )
+*/
+export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (string | Element | Attributes)[]) {
+  const e = split_tag_name(tag_name);
+  pieces.forEach((x, _i) => {
+    if (typeof x === "string")
+      return e.appendChild(document.createTextNode(x as string));
+    if (is_plain_object(x))
+      return set_attrs(e, x as HTMLElementTagNameMap[T]);
+    e.appendChild(x as Element);
+  });
+  return e;
+} // export function
+
+function set_attrs(ele: Element, attrs: any) {
   for (const k in attrs) {
     switch (k) {
       case 'htmlFor':
@@ -124,7 +144,7 @@ function set_attrs(ele: Element, attrs: Attributes) {
         break;
       case 'href':
         try {
-          ele.setAttribute(k, (new URL(attrs['href'])).toString());
+          ele.setAttribute(k, (new URL((attrs as HTMLElementTagNameMap['a'])[k])).toString());
         } catch (e) {
           console.warn("Invalid url.")
         }
@@ -136,28 +156,6 @@ function set_attrs(ele: Element, attrs: Attributes) {
   }
   return ele;
 }
-
-/*
-  * e('input', {name: "_something"}, "My Text")
-  * e('a.red#ID', {href: "https://some.url"}, "My Text")
-  * e('div', e('span', "My Text"))
-  * e('div#main', e('span', "My Text"))
-  * e('div#main',
-  *   e('span', "My Text"),
-  *   e('div', "My Text")
-  * )
-*/
-export function element(tag_name: string, ...pieces : (string | Element | Attributes)[]) {
-  const e = split_tag_name(tag_name);
-  pieces.forEach((x, _i) => {
-    if (typeof x === "string")
-      return e.appendChild(document.createTextNode(x));
-    if (is_plain_object(x))
-      return set_attrs(e, x);
-    e.appendChild(x as Element);
-  });
-  return e;
-} // export function
 
 export function form_data(f: HTMLFormElement) {
   const raw_data = new FormData(f);
@@ -198,8 +196,6 @@ function full_url(x: string): string {
 }
 
 function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
-  ev.preventDefault();
-  ev.stopPropagation();
   const button = ev.target as HTMLElement;
   const form = button.closest('form');
   if (!form) {
@@ -226,16 +222,17 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     body: JSON.stringify(form_data(form))
   };
 
-  const detail = {request: f_request, element: form, do_request: true}
-  document.body.dispatchEvent(new_custom_event('request', {detail}));
-  form_clear_error(form);
+  const request: Request_Origin = {request: f_request, element: form, do_request: true}
 
-  if (!detail.do_request)
+  document.body.dispatchEvent(new_custom_event('request', {detail: request}));
+  if (!request.do_request)
     return false;
 
+  form_clear_error(form);
+
   fetch(full_action, f_request)
-  .then((x: Response) => { response(x, detail) })
-  .catch((x: any) => { network_error(x, detail) });
+  .then((x: Response) => { response(request, x) })
+  .catch((x: any) => { network_error(request, x) });
   return true;
 } // === function
 
@@ -259,56 +256,56 @@ function body_click(ev: MouseEvent) {
   }
 } // === function
 
-async function response(resp: Response, origin: any) {
-  if (!resp.ok)
-    return server_error(resp, origin);
+async function response(req: Request_Origin, raw_resp: Response) {
+  if (!raw_resp.ok)
+    return server_error(req, raw_resp);
 
-  console.log(`Fetch response: ${resp.status}`);
+  console.log(`Fetch response: ${raw_resp.status}`);
 
-  const json: JSON_Response = (await resp.json()) as JSON_Response;
+  const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
 
-  if (!json[X_SENT_FROM]) {
-    console.warn(`#{X_SENT_FROM} key not found in response: ${Object.keys(json).join(', ')}`);
-    return json;
+  if (!resp[X_SENT_FROM]) {
+    console.warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
+    return resp;
   }
 
   console.log('response:');
-  console.log(json);
-  const detail: Custom_Event_Detail = {detail: {response: json}};
+  console.log(resp);
+  const detail: Custom_Event_Detail<Response_Detail> = {detail: {response: resp, request: req}};
   document.querySelectorAll('body').forEach((e) => {
     e.dispatchEvent(new_custom_event("response", detail));
   });
 
-  if (json.success)
+  if (resp.success)
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("success", detail));
-      default_success(origin, json);
+      default_success(req, resp);
     });
   else
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("rejected", detail));
-      default_rejected(origin, json);
+      default_rejected(req, resp);
     });
-  return json;
+  return resp;
 } // === function response
 
-function server_error(response: Response, origin: any) {
+function server_error(req: Request_Origin, response: Response) {
   console.warn(`Form response error: ${response.status} - ${response.statusText}`);
-  const e = origin.element;
+  const e = req.element;
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new_custom_event("server-error", {detail: {response, origin}}));
+      e.dispatchEvent(new_custom_event("server-error", {detail: {response, origin: req}}));
     });
   }
 } // === function request_rejected
 
-function network_error(error: any, origin: any) {
+function network_error(req: Request_Origin, error: any) {
   console.warn(error);
   console.warn(`Form fetch error message: ${error.message}`);
-  const e = origin.element;
+  const e = req.element;
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new_custom_event("network-error", {detail: {error, origin}}));
+      e.dispatchEvent(new_custom_event("network-error", {detail: {error, request: req}}));
     });
   }
 } // === function request_reject
@@ -318,3 +315,4 @@ export function setup_events() {
     body.addEventListener('click', body_click);
   });
 } // export function
+

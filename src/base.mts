@@ -1,5 +1,10 @@
 
 export type Attributes = Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>;
+// export type Attributes = Partial<HTMLAttributes>
+// export interface Attributes {
+//   htmlFor: string,
+//   href: string
+// }
 export const VALID_PROTO = /^(http|https|ssh|ftp|sftp|gopher):\/\//i;
 export const ObjectPrototype = Object.getPrototypeOf({});
 export const SPLIT_TAG_NAME_VALID_PATTERN = /^([a-z0-9]+)([\.\#][a-z0-9\_]+)*$/
@@ -94,3 +99,4 @@ export function split_tag_name(new_class: string) {
     throw new Error(`Tag not allowed to be created: ${tagname}`);
   return {tagname, classList, tagid};
 } // func
+
