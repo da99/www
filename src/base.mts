@@ -100,3 +100,7 @@ export function split_tag_name(new_class: string) {
   return {tagname, classList, tagid};
 } // func
 
+export const EMAIL_PATTERN = /^[^@]+@[^@]+$/;
+export function is_email_valid(x: string) {
+  return !!x.match(EMAIL_PATTERN);
+}
