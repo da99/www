@@ -257,9 +257,11 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
 
   form_clear_error(form);
 
-  fetch(full_action, f_request)
-  .then((x: Response) => { response(request, x) })
-  .catch((x: any) => { network_error(request, x) });
+  setTimeout(async () => {
+    return fetch(full_action, f_request)
+    .then((x: Response) => { response(request, x) })
+    .catch((x: any) => { network_error(request, x) });
+  }, 450);
   return true;
 } // === function
 
