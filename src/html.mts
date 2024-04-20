@@ -108,6 +108,31 @@ export function body(...eles: (string | Element)[]) {
   return document.body;
 }
 
+export function split_id_class(e: Element, id_class: string): HTMLElementTagNameMap[T] {
+  let curr = '';
+  for (const s of id_class.split(SPLIT_TAG_NAME_PATTERN) ) {
+    switch (s) {
+      case '.':
+      case '#':
+        curr = s;
+        break;
+      case '':
+        // ignore
+        break;
+      default:
+        switch (curr) {
+        case '.':
+          e?.classList.add(s);
+        break;
+        case '#':
+          e?.setAttribute('id', s);
+        break;
+      }
+    }
+  }
+  return e;
+} // func
+
 export function split_tag_name(new_class: string): Element {
   let e: Element | null = null;
   let curr = '';
@@ -149,15 +174,27 @@ export function split_tag_name(new_class: string): Element {
   *   e('div', "My Text")
   * )
 */
-export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (string | Element | Attributes)[]) {
-  const e = split_tag_name(tag_name);
-  pieces.forEach((x, _i) => {
-    if (typeof x === "string")
-      return e.appendChild(document.createTextNode(x as string));
-    if (is_plain_object(x))
-      return set_attrs(e, x as HTMLElementTagNameMap[T]);
-    e.appendChild(x as Element);
-  });
+export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...body: (string | Partial<HTMLElementTagNameMap[T]> | Element)[]) {
+  const e = document.createElement(tag_name)
+  for (let i = 0; i < body.length; i++ ){
+    const v = body[i];
+    if (typeof v === 'string') {
+      if (i === 0 && v.at(0) === '#' || v.at(0) === '.') {
+        split_id_class(e, v);
+        continue;
+      }
+      e.appendChild(document.createTextNode(v));
+      continue;
+    }
+
+    if (is_plain_object(v)) {
+      set_attrs(e, v);
+      continue;
+    }
+
+    e.appendChild(v as Element);
+  }
+
   return e;
 } // export function
 
