@@ -1,7 +1,7 @@
 import { assert } from 'chai';
-import { element as E, body, form_data, is_urlish, is_plain_object, split_tag_name } from '../src/html.mts';
+import { element as E, body, form_data, split_tag_name } from '../src/html.mts';
 import { element as BE, html5 } from '../src/bsr.mts';
-import { allow_tags } from '../src/base.mts';
+import { allow_tags, is_urlish, is_plain_object,  } from '../src/base.mts';
 // import { describe } from 'node:test';
 
 allow_tags('html', 'head', 'meta', 'body', 'link', 'img', 'title');
