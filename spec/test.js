@@ -118,14 +118,14 @@ describe('Build Side Rendering', function () {
   describe('element', function () {
     it('throws if #id is not: a-z 0-9 _', function () {
       assert.throws(function () {
-        BE('p#hel"lp', 'spacer');
-      }, `Invalid characters in new element: p#hel"lp`)
+        BE('p', '#hel"lp', 'spacer');
+      }, `Invalid characters in id/class: #hel"lp`)
     });
 
     it('throws if .class is not: a-z 0-9 _', function () {
       assert.throws(function () {
-        BE('p.he"p', 'spacer');
-      }, `Invalid characters in new element: p.he"p`)
+        BE('p', '.he"p', 'spacer');
+      }, `Invalid characters in id/class: .he"p`)
     });
 
     it('.to_html returns an HTML string', function () {

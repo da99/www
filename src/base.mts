@@ -9,6 +9,10 @@ export const VALID_PROTO = /^(http|https|ssh|ftp|sftp|gopher):\/\//i;
 export const ObjectPrototype = Object.getPrototypeOf({});
 export const SPLIT_TAG_NAME_VALID_PATTERN = /^([a-z0-9]+)([\.\#][a-z0-9\_]+)*$/
 export const SPLIT_TAG_NAME_PATTERN = /([\.\#])/g
+
+export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_]+)+$/
+export const SPLIT_ID_CLASS_PATTERN = /([\.\#])/g
+
 export const ALLOWED_TAGS: any = {
   p: true,
   a: true,
@@ -60,6 +64,41 @@ export function is_void_tagname(x: string) {
     return false;
 } // func
 
+export function split_id_class<T extends keyof HTMLElementTagNameMap>(tag_name: T, new_class: string) {
+  if (new_class == '')
+    return {tag_name, tag_id: null, classList: null};
+
+  if (!new_class.match(SPLIT_ID_CLASS_VALID_PATTERN)) {
+    throw new Error(`Invalid characters in id/class: ${new_class}`);
+  }
+
+  let curr = '';
+  const classList: string[] = [];
+  let tag_id = undefined;
+  for (const s of new_class.split(SPLIT_ID_CLASS_PATTERN) ) {
+    switch (s) {
+      case '.':
+      case '#':
+        curr = s;
+        break;
+      case '':
+        // ignore
+        break;
+      default:
+        switch (curr) {
+        case '.':
+          classList.push(s);
+          break;
+        case '#':
+          tag_id = s;
+          break;
+      }
+    }
+  }
+
+  return {tag_name, tag_id, classList};
+} // func
+
 export function split_tag_name(new_class: string) {
     // console.warn(new_class);
   if (!new_class.match(SPLIT_TAG_NAME_VALID_PATTERN)) {
@@ -67,9 +106,9 @@ export function split_tag_name(new_class: string) {
   }
 
   let curr = '';
-  let tagname = 'unknown';
+  let tag_name = 'unknown';
   const classList: string[] = [];
-  let tagid = undefined;
+  let tag_id = undefined;
   for (const s of new_class.split(SPLIT_TAG_NAME_PATTERN) ) {
     switch (s) {
       case '.':
@@ -85,19 +124,19 @@ export function split_tag_name(new_class: string) {
           classList.push(s);
           break;
         case '#':
-          tagid = s;
+          tag_id = s;
           break;
         default:
-          tagname = s;
+          tag_name = s;
       }
     }
   }
 
-  if (tagname == 'unknown')
+  if (tag_name == 'unknown')
     throw `Invalid syntax for element creation: ${new_class}`;
-  if (ALLOWED_TAGS[tagname] !== true)
-    throw new Error(`Tag not allowed to be created: ${tagname}`);
-  return {tagname, classList, tagid};
+  if (ALLOWED_TAGS[tag_name] !== true)
+    throw new Error(`Tag not allowed to be created: ${tag_name}`);
+  return {tag_name, tag_id, classList};
 } // func
 
 export const EMAIL_PATTERN = /^[^@]+@[^@]+$/;

@@ -11,6 +11,7 @@ import type { Attributes } from './base.mts';
 
 import {
   split_tag_name,
+  split_id_class,
   is_plain_object,
   is_void_tagname,
   allow_tags
@@ -29,18 +30,18 @@ class HTML5_DOCTYPE {
 
 class BElement {
   tagname: string;
-  classList: string[];
+  classList: string[] | null;
   attrs: Attributes;
   tagid: undefined | string;
   childs: BChild[];
 
-  constructor(raw_name: string, raw_attrs: Attributes, eles: BChild[]) {
-    const { tagname, classList, tagid } = split_tag_name(raw_name);
-    this.tagname = tagname;
+  constructor(tag_name: keyof HTMLElementTagNameMap, raw_id_class: string, raw_attrs: Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>, eles: BChild[]) {
+    const { classList, tag_id } = split_id_class(tag_name, raw_id_class);
+    this.tagname = tag_name;
     this.classList = classList;
     this.attrs = raw_attrs;
-    if (typeof tagid == 'string')
-      this.attrs['id'] = tagid as string;
+    if (typeof tag_id == 'string')
+      this.attrs['id'] = tag_id;
     this.childs = eles;
     if (this.childs.length > 0 && is_void_tagname(this.tagname)) {
       throw `elements of ${this.tagname} may not have child elements.`;
@@ -50,9 +51,11 @@ class BElement {
   to_html() {
     let html = `<${this.tagname}`;
     //` id=${this.tagid} class=${this.classList.join(' ')}`;
-    if (this.classList.length > 0) {
-      html += ` class="${this.classList.map(x => lodash.escape(x)).join(' ')}"`;
-    }
+    const classList = this.classList;
+    if (classList)
+      if (classList.length > 0) {
+        html += ` class="${classList.map(x => lodash.escape(x)).join(' ')}"`;
+      }
     for (const k in this.attrs) {
       let new_k = k;
       switch (k.toLowerCase()) {
@@ -89,17 +92,29 @@ class BElement {
   *   e('div', "My Text")
   * )
 */
-export function element(tag_name: string, ...pieces : (BChild | Attributes)[]) {
+export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | Partial<HTMLElementTagNameMap[T]>)[]) {
   const eles: BChild[] = [];
   let attrs = undefined;
-  pieces.forEach((x, _i) => {
-    if (typeof x === "string")
-      return eles.push(x);
-    if (is_plain_object(x))
-      return attrs = x;
+  let id_class: string = '';
+  for (let i = 0; i < pieces.length; i++) {
+    const x = pieces[i];
+    if (typeof x === "string") {
+      if (i == 0 && (x.at(0) == '#' || x.at(0) == '.')) {
+        id_class = x;
+        continue;
+      }
+      eles.push(x);
+      continue;
+    }
+
+    if (is_plain_object(x)) {
+      attrs = x as Partial<HTMLElementTagNameMap[T]>;
+      continue;
+    }
+
     eles.push(x as BElement);
-  });
-  return new BElement(tag_name, attrs || {}, eles );
+  }
+  return new BElement(tag_name, id_class, attrs || {}, eles );
 } // export function
 
 allow_tags(
