@@ -1,6 +1,6 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
-import type { Attributes } from './base.mts';
+// import type { Attributes } from './base.mts';
 export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'rejected'
 
 export interface Custom_Event_Detail<T> {
@@ -258,6 +258,21 @@ function full_url(x: string): string {
   return url.toString();
 }
 
+export function reset_body_class(e_id: string, new_class?: Custom_Event_Name | 'loading') {
+  document.body.classList.remove(`${e_id}-success`);
+  document.body.classList.remove(`${e_id}-rejected`);
+  document.body.classList.remove(`${e_id}-server-error`);
+  document.body.classList.remove(`${e_id}-network-error`);
+  document.body.classList.remove(`${e_id}-loading`);
+  if (new_class)
+    add_body_class(e_id, new_class);
+  return document.body.classList;
+}
+
+export function add_body_class(e_id: string, new_class: Custom_Event_Name | 'loading') {
+  return document.body.classList;
+}
+
 function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   const button = ev.target as HTMLElement;
   const form = button.closest('form');
@@ -266,7 +281,10 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
   }
 
-  form.classList.add('loading');
+  const form_id = form.id;
+
+  reset_body_class(form_id, 'loading');
+
   const action = form.getAttribute('action');
   if (!action)
     throw new Error(`action attribute not set for ${get_id(form)}`);
@@ -340,25 +358,31 @@ async function response(req: Request_Origin, raw_resp: Response) {
   }
 
   // form_loaded(req.element)
-  req.element.classList.remove('loading');
+  const form_id = req.element.id;
+  reset_body_class(form_id);
 
-  console.log('response:');
-  console.log(resp);
   const detail: Custom_Event_Detail<Response_Detail> = {detail: {response: resp, request: req}};
+
   document.querySelectorAll('body').forEach((e) => {
     e.dispatchEvent(new_custom_event("response", detail));
   });
 
-  if (resp.success)
+  if (resp.success) {
+    add_body_class(form_id, 'success');
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("success", detail));
+      e.dispatchEvent(new CustomEvent(`${form_id} success`, detail));
       default_success(req, resp);
     });
-  else
+  } else {
+    add_body_class(form_id, 'rejected');
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("rejected", detail));
+      e.dispatchEvent(new CustomEvent(`${form_id} rejected`, detail));
       default_rejected(req, resp);
     });
+  }
+
   return resp;
 } // === function response
 
@@ -368,6 +392,7 @@ function server_error(req: Request_Origin, response: Response) {
   if (e as HTMLElement) {
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("server-error", {detail: {response, origin: req}}));
+      e.dispatchEvent(new CustomEvent(`${req.element.id} server-error`, {detail: {response, origin: req}}));
     });
   }
 } // === function request_rejected
