@@ -2,7 +2,7 @@
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 // import type { Attributes } from './base.mts';
 export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'rejected'
-
+export const Request_States = ['request', 'network-error', 'server-error', 'response', 'success', 'rejected'];
 export interface Custom_Event_Detail<T> {
   detail: T
 }
@@ -63,7 +63,7 @@ export function default_rejected(req: Request_Origin, resp: Response_Origin) {
             div_error.replaceChildren(document.createTextNode(eng_msg));
           }
         } else {
-          fs.append(element('div', {'class': 'error'}, eng_msg));
+          fs.append(element('div', '.error', eng_msg));
         }
       }
     }
@@ -259,17 +259,22 @@ function full_url(x: string): string {
 }
 
 export function reset_body_class(e_id: string, new_class?: Custom_Event_Name | 'loading') {
-  document.body.classList.remove(`${e_id}-success`);
-  document.body.classList.remove(`${e_id}-rejected`);
-  document.body.classList.remove(`${e_id}-server-error`);
-  document.body.classList.remove(`${e_id}-network-error`);
-  document.body.classList.remove(`${e_id}-loading`);
+  const e = document.querySelector(`#${e_id}`);
+  for (const s of Request_States) {
+    document.body.classList.remove(`${e_id}-${s}`);
+    if (e)
+      e.classList.remove(s);
+  }
   if (new_class)
     add_body_class(e_id, new_class);
-  return document.body.classList;
+  return e;
 }
 
 export function add_body_class(e_id: string, new_class: Custom_Event_Name | 'loading') {
+  const e = document.querySelector(`#${e_id}`);
+  if (e) {
+    e.classList.add(new_class);
+  }
   return document.body.classList;
 }
 
