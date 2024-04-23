@@ -221,6 +221,29 @@ export function add_body_class(e_id: string, new_class: Custom_Event_Name | 'loa
   }
   return document.body.classList;
 }
+export function Classy_Events() {
+    document.body.addEventListener('click', on_body_click);
+} // export function
+
+function on_body_click(ev: MouseEvent) {
+  console.log(`Event type: ${ev.type}`);
+  const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
+  switch (ele.tagName) {
+    case 'A':
+      break;
+
+    case 'BUTTON':
+      const button = ele as HTMLButtonElement;
+      if (!button.classList.contains('submit')) {
+        console.warn(`Unknown button type for: ${button}`)
+        return false;
+      }
+      ev.preventDefault();
+      ev.stopPropagation();
+      return form_submit(ev);
+  }
+} // === function
+
 
 function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   const button = ev.target as HTMLElement;
@@ -230,13 +253,13 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     return false;
   }
 
-  const form_id = form.id;
+  const form_id = get_id(form);
 
   reset_body_class(form_id, 'loading');
 
   const action = form.getAttribute('action');
   if (!action)
-    throw new Error(`action attribute not set for ${get_id(form)}`);
+    throw new Error(`action attribute not set for ${form_id}`);
 
   const full_action = full_url( action );
 
@@ -265,29 +288,6 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     .catch((x: any) => { network_error(request, x) });
   }, 450);
   return true;
-} // === function
-
-export function Classy_Events() {
-    document.body.addEventListener('click', on_body_click);
-} // export function
-
-function on_body_click(ev: MouseEvent) {
-  console.log(`Event type: ${ev.type}`);
-  const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
-  switch (ele.tagName) {
-    case 'A':
-      break;
-
-    case 'BUTTON':
-      const button = ele as HTMLButtonElement;
-      if (!button.classList.contains('submit')) {
-        console.warn(`Unknown button type for: ${button}`)
-        return false;
-      }
-      ev.preventDefault();
-      ev.stopPropagation();
-      return form_submit(ev);
-  }
 } // === function
 
 // function form_loading(e: HTMLElement) {
