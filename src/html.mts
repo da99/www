@@ -35,62 +35,6 @@ function new_custom_event<T>(name: Custom_Event_Name, data: Custom_Event_Detail<
   return new CustomEvent(name, data);
 }
 
-// export function safe_uri(x: string) { return {content: x, type: "Safe"}; }
-export function default_success(_req: Request_Origin, resp: Response_Origin) {
-   const e_id = resp.X_SENT_FROM;
-   document.querySelectorAll(`${e_id}`).forEach((e) => {
-     if (e.tagName === 'FORM')
-       form_reset(e as HTMLFormElement);
-   });
-} // --- export function
-
-export function default_rejected(req: Request_Origin, resp: Response_Origin) {
-  if (!Object.hasOwn(resp, 'fields')) {
-    console.warn(`Fields key not set in JSON_Response.`);
-    return false;
-  }
-
-  for (const [f, msg] of Object.entries(resp.fields)) {
-    console.log(`${f} => ${msg}`);
-    const label = req.element.querySelector(`label[for='${f}']`);
-    if (label) {
-      const fs = label.closest('fieldset');
-      if (fs) {
-        const div_error = fs.querySelector('div.error');
-        const eng_msg = english_error_msg(f, msg);
-        if (div_error) {
-          if (div_error.textContent !== eng_msg) {
-            div_error.replaceChildren(document.createTextNode(eng_msg));
-          }
-        } else {
-          fs.append(element('div', '.error', eng_msg));
-        }
-      }
-    }
-  }
-
-} // --- export function
-
-export function english_error_msg(f: string, msg: string) {
-  switch (`${f} ${msg}`) {
-    case "email empty":
-      return `Email address can not be empty.`;
-    default:
-      return `${f.toUpperCase()} may not be ${msg}.`
-  }
-}
-
-export function form_reset(f: HTMLFormElement) {
-  f.reset();
-  form_clear_error(f);
-  return f;
-}
-
-export function form_clear_error(f: HTMLFormElement) {
-  f.querySelectorAll('div.error')
-  return f;
-}
-
 export function fragment(...eles: (string | Element)[]) {
   let dom_fragment = document.createDocumentFragment();
   for (const x of eles) {
@@ -315,8 +259,6 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   if (!request.do_request)
     return false;
 
-  form_clear_error(form);
-
   setTimeout(async () => {
     return fetch(full_action, f_request)
     .then((x: Response) => { response(request, x) })
@@ -325,7 +267,11 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   return true;
 } // === function
 
-function body_click(ev: MouseEvent) {
+export function Classy_Events() {
+    document.body.addEventListener('click', on_body_click);
+} // export function
+
+function on_body_click(ev: MouseEvent) {
   console.log(`Event type: ${ev.type}`);
   const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
   switch (ele.tagName) {
@@ -338,7 +284,6 @@ function body_click(ev: MouseEvent) {
         console.warn(`Unknown button type for: ${button}`)
         return false;
       }
-      console.log('You are submitting this form');
       ev.preventDefault();
       ev.stopPropagation();
       return form_submit(ev);
@@ -377,14 +322,12 @@ async function response(req: Request_Origin, raw_resp: Response) {
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("success", detail));
       e.dispatchEvent(new CustomEvent(`${form_id} success`, detail));
-      default_success(req, resp);
     });
   } else {
     add_body_class(form_id, 'rejected');
     document.querySelectorAll('body').forEach((e) => {
       e.dispatchEvent(new_custom_event("rejected", detail));
       e.dispatchEvent(new CustomEvent(`${form_id} rejected`, detail));
-      default_rejected(req, resp);
     });
   }
 
@@ -413,9 +356,4 @@ function network_error(req: Request_Origin, error: any) {
   }
 } // === function request_reject
 
-export function setup_events() {
-  document.querySelectorAll('body').forEach((body) => {
-    body.addEventListener('click', body_click);
-  });
-} // export function
 
