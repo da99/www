@@ -10,23 +10,12 @@ import type { Attributes } from './base.mts';
 // import sanitizeHtml from 'sanitize-html';
 
 import {
-  split_tag_name,
   split_id_class,
   is_plain_object,
-  is_void_tagname,
-  allow_tags
+  is_void_tagname
 } from './base.mts';
 
 type BChild = string | BElement
-
-class HTML5_DOCTYPE {
-  constructor() {
-
-  }
-  to_html() {
-    return `<!DOCTYPE html>`;
-  }
-}
 
 class BElement {
   tagname: string;
@@ -116,14 +105,6 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
   }
   return new BElement(tag_name, id_class, attrs || {}, eles );
 } // export function
-
-allow_tags(
-  'meta', 'link', 'title', 'head', 'script', 'body',
-  'main', 'footer', 'form', 'fieldset', 'label', 'input',
-  'button'
-);
-
-export {allow_tags};
 
 // export function fragment(...eles: (string | Element)[]) {
 //   let dom_fragment = document.createDocumentFragment();
