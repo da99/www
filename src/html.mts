@@ -28,10 +28,8 @@ export interface Response_Detail {
 
 const THE_BODY = document.body;
 
-/* This is also used for CSRF protection. */
-export const X_SENT_FROM = "X_SENT_FROM";
 
-import { is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
+import { X_SENT_FROM, is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
 
 function new_custom_event<T>(name: Custom_Event_Name, data: Custom_Event_Detail<T>) {
   return new CustomEvent(name, data);
@@ -54,7 +52,7 @@ export function body(...eles: (string | Element)[]) {
   return THE_BODY;
 }
 
-export function split_id_class(e: Element, id_class: string): HTMLElementTagNameMap[T] {
+export function split_id_class(e: Element, id_class: string): Element {
   let curr = '';
   for (const s of id_class.split(SPLIT_TAG_NAME_PATTERN) ) {
     switch (s) {
@@ -79,43 +77,12 @@ export function split_id_class(e: Element, id_class: string): HTMLElementTagName
   return e;
 } // func
 
-export function split_tag_name(new_class: string): Element {
-  let e: Element | null = null;
-  let curr = '';
-  for (const s of new_class.split(SPLIT_TAG_NAME_PATTERN) ) {
-    switch (s) {
-      case '.':
-      case '#':
-        curr = s;
-        break;
-      case '':
-        // ignore
-        break;
-      default:
-        switch (curr) {
-        case '.':
-          e?.classList.add(s);
-          break;
-        case '#':
-          e?.setAttribute('id', s);
-          break;
-        default:
-          e = document.createElement(s);
-      }
-    }
-  }
- 
-  if (!e)
-    throw `Invalid syntax for element creation: ${new_class}`;
-  return e;
-} // func
-
 /*
   * e('input', {name: "_something"}, "My Text")
-  * e('a.red#ID', {href: "https://some.url"}, "My Text")
+  * e('a', '.red#ID', {href: "https://some.url"}, "My Text")
   * e('div', e('span', "My Text"))
-  * e('div#main', e('span', "My Text"))
-  * e('div#main',
+  * e('div', '#main', e('span', "My Text"))
+  * e('div', '#main',
   *   e('span', "My Text"),
   *   e('div', "My Text")
   * )
@@ -206,13 +173,16 @@ function full_url(x: string): string {
 
 export function reset_body_class(e_id: string, new_class?: Custom_Event_Name | 'loading') {
   const e = document.querySelector(`#${e_id}`);
+
   for (const s of Request_States) {
     THE_BODY.classList.remove(`${e_id}-${s}`);
     if (e)
       e.classList.remove(s);
   }
+
   if (new_class)
     add_body_class(e_id, new_class);
+
   return e;
 }
 
@@ -221,7 +191,7 @@ export function add_body_class(e_id: string, new_class: Custom_Event_Name | 'loa
   if (e) {
     e.classList.add(new_class);
   }
-  return THE_BODY.classList;
+  return THE_BODY;
 }
 
 export function Classy_Events() {
@@ -230,7 +200,11 @@ export function Classy_Events() {
 
 function on_body_click(ev: MouseEvent) {
   console.log(`Event type: ${ev.type}`);
-  const ele =  ev.target && (ev.target as any).tagName && (ev.target as Element);
+  const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
+
+  if (!ele)
+    return false;
+
   switch (ele.tagName) {
     case 'A':
       break;
@@ -279,7 +253,11 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     body: JSON.stringify(form_data(form))
   };
 
-  const request: Request_Origin = {request: f_request, element: form, do_request: true}
+  const request: Request_Origin = {
+    request: f_request,
+    element: form,
+    do_request: true
+  };
 
   THE_BODY.dispatchEvent(new_custom_event('request', {detail: request}));
 
@@ -302,8 +280,6 @@ async function response(req: Request_Origin, raw_resp: Response) {
   if (!raw_resp.ok)
     return server_error(req, raw_resp);
 
-  console.log(`Fetch response: ${raw_resp.status}`);
-
   const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
 
   if (!resp[X_SENT_FROM]) {
@@ -313,6 +289,7 @@ async function response(req: Request_Origin, raw_resp: Response) {
 
   // form_loaded(req.element)
   const form_id = req.element.id;
+  const form = req.element;
   reset_body_class(form_id);
 
   const detail: Custom_Event_Detail<Response_Detail> = {detail: {response: resp, request: req}};
@@ -328,6 +305,12 @@ async function response(req: Request_Origin, raw_resp: Response) {
     add_body_class(form_id, 'invalid');
     THE_BODY.dispatchEvent(new_custom_event("invalid", detail));
     THE_BODY.dispatchEvent(new CustomEvent(`${form_id} invalid`, detail));
+    for (const k in resp.fields) {
+      const target = form.querySelector(`label[for='${k}'], input[name='${k}']`);
+      const fieldset = (target && target.closest('fieldset')) || form.querySelector(`fieldset.${k}`);
+      if (fieldset)
+        fieldset.classList.add('invalid');
+    }
   }
 
   return resp;
