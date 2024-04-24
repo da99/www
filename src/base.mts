@@ -10,7 +10,7 @@ export const ObjectPrototype = Object.getPrototypeOf({});
 export const SPLIT_TAG_NAME_VALID_PATTERN = /^([a-z0-9]+)([\.\#][a-z0-9\_]+)*$/
 export const SPLIT_TAG_NAME_PATTERN = /([\.\#])/g
 
-export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_]+)+$/
+export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_\-]+)+$/
 export const SPLIT_ID_CLASS_PATTERN = /([\.\#])/g
 
 export const ALLOWED_TAGS: any = {
