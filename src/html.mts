@@ -122,7 +122,7 @@ function set_attrs(ele: Element, attrs: any) {
         try {
           ele.setAttribute(k, (new URL((attrs as HTMLElementTagNameMap['a'])[k])).toString());
         } catch (e) {
-          console.warn("Invalid url.")
+          warn("Invalid url.")
         }
         break;
       default:
@@ -199,7 +199,7 @@ export function Classy_Events() {
 } // export function
 
 function on_body_click(ev: MouseEvent) {
-  console.log(`Event type: ${ev.type}`);
+  log(`Event type: ${ev.type}`);
   const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
 
   if (!ele)
@@ -212,7 +212,7 @@ function on_body_click(ev: MouseEvent) {
     case 'BUTTON':
       const button = ele as HTMLButtonElement;
       if (!button.classList.contains('submit')) {
-        console.warn(`Unknown button type for: ${button}`)
+        warn(`Unknown button type for: ${button}`)
         return false;
       }
       ev.preventDefault();
@@ -226,7 +226,7 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
   const button = ev.target as HTMLElement;
   const form = button.closest('form');
   if (!form) {
-    console.warn('Form not found for: ' + button.tagName);
+    warn('Form not found for: ' + button.tagName);
     return false;
   }
 
@@ -283,7 +283,7 @@ async function response(req: Request_Origin, raw_resp: Response) {
   const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
 
   if (!resp[X_SENT_FROM]) {
-    console.warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
+    warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
     return resp;
   }
 
@@ -316,26 +316,40 @@ async function response(req: Request_Origin, raw_resp: Response) {
   return resp;
 } // === function response
 
-function server_error(req: Request_Origin, response: Response) {
-  console.warn(`Form response error: ${response.status} - ${response.statusText}`);
-  const e = req.element;
+function server_error(request: Request_Origin, response: Response) {
+  warn(`Form response error: ${response.status} - ${response.statusText}`);
+  const e = request.element;
+  THE_BODY.dispatchEvent(new_custom_event("server-error", {detail: {request, response}}));
   if (e as HTMLElement) {
-    document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new_custom_event("server-error", {detail: {response, origin: req}}));
-      e.dispatchEvent(new CustomEvent(`${req.element.id} server-error`, {detail: {response, origin: req}}));
-    });
+    reset_body_class(e.id, 'server-error')
+    THE_BODY.dispatchEvent(new CustomEvent(`${e.id} server-error`, {detail: {request, response}}));
+    return true;
   }
+  return false;
 } // === function request_invalid
 
-function network_error(req: Request_Origin, error: any) {
-  console.warn(error);
-  console.warn(`Form fetch error message: ${error.message}`);
-  const e = req.element;
+function network_error(request: Request_Origin, error: any) {
+  warn(error);
+  warn(`Form fetch error message: ${error.message}`);
+  const e = request.element;
   if (e as HTMLElement) {
-    document.querySelectorAll('body').forEach((e) => {
-      e.dispatchEvent(new_custom_event("network-error", {detail: {error, request: req}}));
-    });
+    reset_body_class(e.id, 'network-error')
+    THE_BODY.dispatchEvent(new_custom_event('network-error', {detail: {error, request}}));
+    THE_BODY.dispatchEvent(new CustomEvent(`${e.id} network-error`, {detail: {error, request}}));
+    return true;
   }
+
+  return false;
 } // === function
 
+export function log(...args: any[]) {
+  if (window.location.href.indexOf('http://localhost:') === 0)
+    return console.log(...args);
+  return false;
+}
 
+export function warn(...args: any[]) {
+  if (window.location.href.indexOf('http://localhost:') === 0)
+    return console.warn(...args);
+  return false;
+}

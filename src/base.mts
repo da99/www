@@ -55,7 +55,7 @@ export function is_void_tagname(x: string) {
 
 export function split_id_class<T extends keyof HTMLElementTagNameMap>(tag_name: T, new_class: string) {
   if (new_class == '')
-    return {tag_name, tag_id: null, classList: null};
+    return {tag_name, tag_id: null, class_list: []};
 
   if (!new_class.match(SPLIT_ID_CLASS_VALID_PATTERN)) {
     throw new Error(`Invalid characters in id/class: ${new_class}`);

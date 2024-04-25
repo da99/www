@@ -19,15 +19,15 @@ type BChild = string | BElement
 
 class BElement {
   tagname: string;
-  classList: string[] | null;
+  class_list: string[] | null;
   attrs: Attributes;
   tagid: undefined | string;
   childs: BChild[];
 
   constructor(tag_name: keyof HTMLElementTagNameMap, raw_id_class: string, raw_attrs: Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>, eles: BChild[]) {
-    const { classList, tag_id } = split_id_class(tag_name, raw_id_class);
+    const { class_list, tag_id } = split_id_class(tag_name, raw_id_class);
     this.tagname = tag_name;
-    this.classList = classList;
+    this.class_list = class_list;
     this.attrs = raw_attrs;
     if (typeof tag_id == 'string')
       this.attrs['id'] = tag_id;
@@ -39,12 +39,13 @@ class BElement {
 
   to_html() {
     let html = `<${this.tagname}`;
-    //` id=${this.tagid} class=${this.classList.join(' ')}`;
-    const classList = this.classList;
-    if (classList)
-      if (classList.length > 0) {
-        html += ` class="${classList.map(x => lodash.escape(x)).join(' ')}"`;
+    const class_list = this.class_list;
+
+    if (class_list)
+      if (class_list.length > 0) {
+        html += ` class="${class_list.map(x => lodash.escape(x)).join(' ')}"`;
       }
+
     for (const k in this.attrs) {
       let new_k = k;
       switch (k.toLowerCase()) {
@@ -54,6 +55,7 @@ class BElement {
       }
       html += ` ${new_k}="${lodash.escape(this.attrs[k as keyof Attributes])}"`
     } // for
+
     html += '>';
 
     if (is_void_tagname(this.tagname))
