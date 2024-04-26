@@ -1,8 +1,8 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 // import type { Attributes } from './base.mts';
-export const Request_States = ['request', 'network-error', 'server-error', 'response', 'success', 'invalid'];
-export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'invalid'
+export const Request_States = ['request', 'network-error', 'server-error', 'response', 'success', 'invalid', 'loading'];
+export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'invalid' | 'loading'
 export interface Custom_Event_Detail<T> {
   detail: T
 }
@@ -171,7 +171,7 @@ function full_url(x: string): string {
   return url.toString();
 }
 
-export function reset_body_class(e_id: string, new_class?: Custom_Event_Name | 'loading') {
+export function reset_body_class(e_id: string, new_class?: Custom_Event_Name) {
   const e = document.querySelector(`#${e_id}`);
 
   for (const s of Request_States) {
@@ -186,7 +186,7 @@ export function reset_body_class(e_id: string, new_class?: Custom_Event_Name | '
   return e;
 }
 
-export function add_body_class(e_id: string, new_class: Custom_Event_Name | 'loading') {
+export function add_body_class(e_id: string, new_class: Custom_Event_Name) {
   const e = document.querySelector(`#${e_id}`);
   if (e) {
     e.classList.add(new_class);
