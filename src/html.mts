@@ -27,9 +27,24 @@ export interface Response_Detail {
 }
 
 const THE_BODY = document.body;
+export const IS_DEV = window.location.href.indexOf('http://localhost:') === 0;
 
 
 import { X_SENT_FROM, is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
+
+export function log(...args: any[]) {
+  if (!IS_DEV)
+    return false;
+
+  return console.log(...args);
+}
+
+export function warn(...args: any[]) {
+  if (!IS_DEV)
+    return false;
+
+  return console.warn(...args);
+}
 
 function new_custom_event<T>(name: Custom_Event_Name, data: Custom_Event_Detail<T>) {
   return new CustomEvent(name, data);
@@ -171,7 +186,7 @@ function full_url(x: string): string {
   return url.toString();
 }
 
-export function reset_body_class(e_id: string, new_class?: Custom_Event_Name) {
+export function reset_css_state(e_id: string, new_class?: Custom_Event_Name) {
   const e = document.querySelector(`#${e_id}`);
 
   for (const s of Request_States) {
@@ -181,12 +196,13 @@ export function reset_body_class(e_id: string, new_class?: Custom_Event_Name) {
   }
 
   if (new_class)
-    add_body_class(e_id, new_class);
+    set_css_state(e_id, new_class);
 
   return e;
 }
 
-export function add_body_class(e_id: string, new_class: Custom_Event_Name) {
+export function set_css_state(e_id: string, new_class: Custom_Event_Name) {
+  THE_BODY.classList.add(`${e_id}-${new_class}`);
   const e = document.querySelector(`#${e_id}`);
   if (e) {
     e.classList.add(new_class);
@@ -232,7 +248,7 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
 
   const form_id = get_id(form);
 
-  reset_body_class(form_id, 'loading');
+  reset_css_state(form_id, 'loading');
 
   const action = form.getAttribute('action');
   if (!action)
@@ -290,7 +306,7 @@ async function response(req: Request_Origin, raw_resp: Response) {
   // form_loaded(req.element)
   const form_id = req.element.id;
   const form = req.element;
-  reset_body_class(form_id);
+  reset_css_state(form_id);
 
   const detail: Custom_Event_Detail<Response_Detail> = {detail: {response: resp, request: req}};
 
@@ -298,11 +314,11 @@ async function response(req: Request_Origin, raw_resp: Response) {
   THE_BODY.dispatchEvent(new_custom_event("response", detail));
 
   if (resp.success) {
-    add_body_class(form_id, 'success');
+    set_css_state(form_id, 'success');
     THE_BODY.dispatchEvent(new_custom_event("success", detail));
     THE_BODY.dispatchEvent(new CustomEvent(`${form_id} success`, detail));
   } else {
-    add_body_class(form_id, 'invalid');
+    set_css_state(form_id, 'invalid');
     THE_BODY.dispatchEvent(new_custom_event("invalid", detail));
     THE_BODY.dispatchEvent(new CustomEvent(`${form_id} invalid`, detail));
     for (const k in resp.fields) {
@@ -317,11 +333,15 @@ async function response(req: Request_Origin, raw_resp: Response) {
 } // === function response
 
 function server_error(request: Request_Origin, response: Response) {
-  warn(`Form response error: ${response.status} - ${response.statusText}`);
+  warn(`!!! Server Error: ${response.status} - ${response.statusText}`);
+  if (IS_DEV) {
+
+  }
+
   const e = request.element;
   THE_BODY.dispatchEvent(new_custom_event("server-error", {detail: {request, response}}));
   if (e as HTMLElement) {
-    reset_body_class(e.id, 'server-error')
+    reset_css_state(e.id, 'server-error')
     THE_BODY.dispatchEvent(new CustomEvent(`${e.id} server-error`, {detail: {request, response}}));
     return true;
   }
@@ -330,10 +350,10 @@ function server_error(request: Request_Origin, response: Response) {
 
 function network_error(request: Request_Origin, error: any) {
   warn(error);
-  warn(`Form fetch error message: ${error.message}`);
+  warn(`!!! Network error: ${error.message}`);
   const e = request.element;
   if (e as HTMLElement) {
-    reset_body_class(e.id, 'network-error')
+    reset_css_state(e.id, 'network-error')
     THE_BODY.dispatchEvent(new_custom_event('network-error', {detail: {error, request}}));
     THE_BODY.dispatchEvent(new CustomEvent(`${e.id} network-error`, {detail: {error, request}}));
     return true;
@@ -342,14 +362,3 @@ function network_error(request: Request_Origin, error: any) {
   return false;
 } // === function
 
-export function log(...args: any[]) {
-  if (window.location.href.indexOf('http://localhost:') === 0)
-    return console.log(...args);
-  return false;
-}
-
-export function warn(...args: any[]) {
-  if (window.location.href.indexOf('http://localhost:') === 0)
-    return console.warn(...args);
-  return false;
-}
