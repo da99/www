@@ -23,6 +23,7 @@ ensure_build_dir() {
       ;;
   esac
 }
+
 case "$*" in
   --help|help|-h)
   cmd="$(basename "$0")"
@@ -33,7 +34,7 @@ case "$*" in
   echo "$cmd upload to bucket"
   echo "$cmd prune files"
   echo "$cmd build mjs|css|html"
-  echo "$cmd serve"
+  echo "$cmd serve [PORT] [DIR] [CMD] - Run CMD and serve static file."
   echo "$cmd list old|new files"
   ;;
 
@@ -104,6 +105,11 @@ case "$*" in
 
   'prune files')
     bun run "$THIS_DIR"/src/Public_File.mts "$@"
+  ;;
+
+  'serve '*)
+    set -x
+    bun run "$THIS_DIR"/src/static.serve.ts "$@"
   ;;
 
   *)

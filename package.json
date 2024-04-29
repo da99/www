@@ -4,6 +4,7 @@
     "@types/node": "latest",
     "chai": "latest",
     "lodash": "latest",
-    "mocha": "latest"
+    "mocha": "latest",
+    "hono": "latest"
   }
 }
