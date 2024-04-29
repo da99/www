@@ -39,7 +39,8 @@ class PublicFile
           'local_path' => new_file.path,
           'public_path' => new_file.public_path,
           'etag' => new_file.etag[0..ETAG_SIZE],
-          'created_at' => new_file.created_at
+          'created_at' => new_file.created_at,
+          'base64' => ENV['BUILD_TARGET'] == 'dev' ? `base64 -w 0 #{new_file.raw}`.strip : nil
         }
         memo
       end
