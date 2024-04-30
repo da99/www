@@ -35,20 +35,29 @@ class PublicFile
     def manifest(raw_dir)
       dir = normalize_dir(raw_dir)
       all(dir).inject({}) do |memo, new_file|
-        memo[new_file.path.sub(dir, '')] = {
+        data = {
           'local_path' => new_file.path,
           'public_path' => new_file.public_path,
           'etag' => new_file.etag[0..ETAG_SIZE],
           'created_at' => new_file.created_at,
-          'base64' => ENV['BUILD_TARGET'] == 'dev' ? `base64 -w 0 #{new_file.raw}`.strip : nil,
-          'mime_type' => ` file --mime "#{new_file.raw}"`.strip.split(':').last.strip
+          'base64' => nil,
+          'mime_type' => `file --mime "#{new_file.raw}"`.strip.split(':').last.strip
         }
+        if ENV['BUILD_TARGET'] == 'dev'
+          data['base64'] = case data['mime_type']
+                           when /(charset=.+-ascii)|(charset=utf-8)/
+                             File.read(new_file.raw)
+                           else
+                             `base64 -w 0 #{new_file.raw}`.strip
+                           end
+        end
+        memo[new_file.path.sub(dir, '')] = data
         memo
       end
     end
 
     def write_manifest(settings)
-      settings['public_files'] = manifest(settings['static_dir'])
+      settings['public_files'] = manifest(File.join(settings['build_dir'], settings['static_dir']))
       json = JSON.pretty_generate(settings)
       File.write('settings.json', json)
       puts '=== Wrote: settings.json'
