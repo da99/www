@@ -40,7 +40,8 @@ class PublicFile
           'public_path' => new_file.public_path,
           'etag' => new_file.etag[0..ETAG_SIZE],
           'created_at' => new_file.created_at,
-          'base64' => ENV['BUILD_TARGET'] == 'dev' ? `base64 -w 0 #{new_file.raw}`.strip : nil
+          'base64' => ENV['BUILD_TARGET'] == 'dev' ? `base64 -w 0 #{new_file.raw}`.strip : nil,
+          'mime_type' => ` file --mime "#{new_file.raw}"`.strip.split(':').last.strip
         }
         memo
       end
