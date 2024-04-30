@@ -7,6 +7,17 @@ const NOT_UPLOADED = 0
 const UPLOADED = 1
 const PRUNED = 2
 
+type JSON_FILE = {
+  local_path: string,
+  public_path: string,
+  etag: string,
+  created_at: string
+}
+
+type FILE_MANIFEST = {
+  [index: string]: JSON_FILE
+}
+
 type SITE_SETTINGS = {
   static_dir: string,
   bucket_name: string,
@@ -14,13 +25,8 @@ type SITE_SETTINGS = {
 }
 
 const THE_SITE_SETTINGS = await (Bun.file('settings.json').json() as Promise<SITE_SETTINGS>);
+const PUBLIC_FILES = await (Bun.file('public_files.json').json() as Promise<FILE_MANIFEST>)
 
-type JSON_FILE = {
-  local_path: string,
-  public_path: string,
-  etag: string,
-  created_at: string
-}
 
 type FILE_ROW = {
   local_path: string,
@@ -67,7 +73,7 @@ class DB {
 
   new_files() {
     const this_db = this;
-    const files = Object.values(THE_SITE_SETTINGS.public_files);
+    const files = Object.values(PUBLIC_FILES);
     const f_paths: string[] = files.map((f) => f.public_path);
     const q = this_db.db.query(`
         SELECT public_path
@@ -83,7 +89,7 @@ class DB {
 
   old_files() {
     const this_db = this;
-    const current_files = Object.values(THE_SITE_SETTINGS.public_files);
+    const current_files = Object.values(PUBLIC_FILES);
     const current_public_paths: string[] = current_files.map((f) => f.public_path);
     const q = this_db.db.query(`
         SELECT *

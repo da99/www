@@ -41,8 +41,16 @@ class PublicFile
           'etag' => new_file.etag[0..ETAG_SIZE],
           'created_at' => new_file.created_at,
           'base64' => nil,
-          'mime_type' => `file --mime "#{new_file.raw}"`.strip.split(':').last.strip
+          'mime_type' => `bun --eval "console.log(Bun.file('#{new_file.raw}').type)"`.strip
         }
+
+        # case new_file.path
+        # when /\.css$/
+        #   data['mime_type'] = data['mime_type'].sub('text/plain', 'text/css')
+        # when /\.mjs$/
+        #   data['mime_type'] = data['mime_type'].sub('text/plain', 'application/javascript')
+        # end
+
         if ENV['BUILD_TARGET'] == 'dev'
           data['base64'] = case data['mime_type']
                            when /(charset=.+-ascii)|(charset=utf-8)/
@@ -57,10 +65,10 @@ class PublicFile
     end
 
     def write_manifest(settings)
-      settings['public_files'] = manifest(File.join(settings['build_dir'], settings['static_dir']))
-      json = JSON.pretty_generate(settings)
-      File.write('settings.json', json)
-      puts '=== Wrote: settings.json'
+      public_files = manifest(File.join(settings['build_dir'], settings['static_dir']))
+      json = JSON.pretty_generate(public_files)
+      File.write('public_files.json', json)
+      puts '=== Wrote: public_files.json'
     end
   end
   # --- class << self

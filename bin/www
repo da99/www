@@ -30,7 +30,7 @@ case "$*" in
   echo "$cmd setup bucket"
   echo "     Create the sqlite database to remember uploaded/pruned public files."
   echo "$cmd update file manifest"
-  echo "     Updates the \"public_files\" Array in settings.json"
+  echo "     Writes public_files.json"
   echo "$cmd upload to bucket"
   echo "$cmd prune files"
   echo "$cmd build mjs|css|html"

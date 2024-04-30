@@ -15,10 +15,10 @@ class Bucket
 
   attr_reader :dir, :files, :bucket
 
-  def initialize(settings)
+  def initialize(settings, public_files)
     @bucket = settings['bucket_api_url']
     @dir = PublicFile.normalize_dir(settings['static_dir'])
-    @files = settings['public_files']
+    @files = public_files
   end
   # === def
 
@@ -51,7 +51,8 @@ if $PROGRAM_NAME == __FILE__
   case cmd
   when 'upload to bucket'
     settings = JSON.parse(File.read('settings.json'))
-    b = Bucket.new(settings)
+    public_files = JSON.parse(File.read('public_files.json'))
+    b = Bucket.new(settings, public_files)
     b.upload
 
   when 'update file manifest'
