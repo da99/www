@@ -55,10 +55,6 @@ if $PROGRAM_NAME == __FILE__
     b = Bucket.new(settings, public_files)
     b.upload
 
-  when 'update file manifest'
-    j = JSON.parse(File.read('settings.json'))
-    PublicFile.write_manifest(j)
-
   else
     warn "!!! Unknown command: #{cmd}"
     exit 1

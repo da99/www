@@ -31,6 +31,8 @@ case "$*" in
   echo "     Create the sqlite database to remember uploaded/pruned public files."
   echo "$cmd update file manifest"
   echo "     Writes public_files.json"
+  echo "$cmd update raw file manifest"
+  echo "     Writes tmp/raw_files.json"
   echo "$cmd upload to bucket"
   echo "$cmd prune files"
   echo "$cmd build mjs|css|html"
@@ -43,7 +45,11 @@ case "$*" in
   ;;
 
   "update file manifest")
-    "$THIS_DIR"/src/Bucket.rb "$@"
+    "$THIS_DIR"/src/PublicFile.rb "$@"
+  ;;
+
+  "update raw file manifest")
+    "$THIS_DIR"/src/PublicFile.rb "$@"
   ;;
 
   "set src to "*)

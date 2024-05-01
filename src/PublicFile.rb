@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require 'json'
+
 def run_cmd(s_cmd)
   warn "--- Running: #{s_cmd}"
   `#{s_cmd}`.strip
@@ -30,6 +32,19 @@ class PublicFile
         exit 1
       end
       dir
+    end
+
+    def write_raw_manifest(settings)
+      static_dir = normalize_dir(settings['static_dir'])
+      file_name = 'tmp/raw_files.json'
+      raw = `find "#{static_dir}" -type f -not -iname '.*'`
+            .strip
+            .split("\n")
+            .map { |x| x.sub(static_dir, '').sub(/\.html.mts$/, '.html').sub(/\.ts/, '.js').sub(/\.mts/, '.mjs') }
+            .each_with_object({}) { |x, o| o[x] = x }
+      `mkdir -p tmp`
+      File.write(file_name, JSON.pretty_generate(raw))
+      puts "=== Wrote: #{file_name}"
     end
 
     def manifest(raw_dir)
@@ -134,6 +149,14 @@ if $PROGRAM_NAME == __FILE__
         warn "--- File removed: #{x}"
       end
     end
+
+  when 'update raw file manifest'
+    j = JSON.parse(File.read('settings.json'))
+    PublicFile.write_raw_manifest(j)
+
+  when 'update file manifest'
+    j = JSON.parse(File.read('settings.json'))
+    PublicFile.write_manifest(j)
 
   when /^set src to (.+)$/i
     dir = 'dist'
