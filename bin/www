@@ -38,6 +38,7 @@ case "$*" in
   echo "$cmd build mjs|css|html"
   echo "$cmd serve [PORT] [DIR] [CMD] - Run CMD and serve static file."
   echo "$cmd list old|new files"
+  echo "$cmd mime [FILE]"
   ;;
 
   "upload to bucket"|"setup bucket")
@@ -118,6 +119,17 @@ case "$*" in
     bun run "$THIS_DIR"/src/static.serve.ts "$@"
   ;;
 
+  'mime '*)
+    results="$(bun --eval "console.log(Bun.file('$2').type)")"
+    case "$results" in
+      "application/octet-stream")
+        file --mime "$2" | cut -d':' -f2- | cut -d' ' -f2-
+        ;;
+      *)
+        echo "$results"
+        ;;
+    esac
+  ;;
   *)
     echo "!!! Unknown command: $*" >&2
     exit 1

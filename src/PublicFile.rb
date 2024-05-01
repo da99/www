@@ -59,31 +59,23 @@ class PublicFile
           'mime_type' => `bun --eval "console.log(Bun.file('#{new_file.raw}').type)"`.strip
         }
 
-        # case new_file.path
-        # when /\.css$/
-        #   data['mime_type'] = data['mime_type'].sub('text/plain', 'text/css')
-        # when /\.mjs$/
-        #   data['mime_type'] = data['mime_type'].sub('text/plain', 'application/javascript')
-        # end
-
-        if ENV['BUILD_TARGET'] == 'dev'
-          data['base64'] = case data['mime_type']
-                           when /(charset=.+-ascii)|(charset=utf-8)/
-                             File.read(new_file.raw)
-                           else
-                             `base64 -w 0 #{new_file.raw}`.strip
-                           end
-        end
+        data['base64'] = case data['mime_type']
+                         when /(charset=.+-ascii)|(charset=utf-8)/
+                           File.read(new_file.raw)
+                         else
+                           `base64 -w 0 #{new_file.raw}`.strip
+                         end
         memo[new_file.path.sub(dir, '')] = data
         memo
       end
     end
 
     def write_manifest(settings)
+      file_path = 'tmp/public_files.json'
       public_files = manifest(File.join(settings['build_dir'], settings['static_dir']))
       json = JSON.pretty_generate(public_files)
-      File.write('public_files.json', json)
-      puts '=== Wrote: public_files.json'
+      File.write(file_path, json)
+      puts "=== Wrote: #{file_path}"
     end
   end
   # --- class << self
