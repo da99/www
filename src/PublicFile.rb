@@ -49,14 +49,14 @@ class PublicFile
 
     def manifest(raw_dir)
       dir = normalize_dir(raw_dir)
-      all(dir).inject({}) do |memo, new_file|
+      all(dir).each_with_object({}) do |new_file, memo|
         data = {
           'local_path' => new_file.path,
           'public_path' => new_file.public_path,
           'etag' => new_file.etag[0..ETAG_SIZE],
           'created_at' => new_file.created_at,
           'base64' => nil,
-          'mime_type' => `bun --eval "console.log(Bun.file('#{new_file.raw}').type)"`.strip
+          'mime_type' => `www mime '#{new_file.raw}'`.strip
         }
 
         data['base64'] = case data['mime_type']
