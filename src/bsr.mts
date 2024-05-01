@@ -187,7 +187,7 @@ export class Static {
 } // class
 
 export function static_url(sPath: string) {
-  const public_file = PUBLIC_FILES[sPath];
+  const public_file = PUBLIC_FILES[sPath as keyof typeof PUBLIC_FILES];
   if (!public_file)
     throw new Error(`!!! File not found: ${sPath}`);
 
