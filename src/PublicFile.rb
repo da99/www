@@ -35,7 +35,7 @@ class PublicFile
     end
 
     def write_raw_manifest(settings)
-      static_dir = normalize_dir(settings['static_dir'])
+      static_dir = normalize_dir(settings['STATIC_DIR'])
       file_name = 'tmp/raw_files.json'
       raw = `find "#{static_dir}" -type f -not -iname '.*'`
             .strip
@@ -65,7 +65,7 @@ class PublicFile
 
     def write_manifest(settings)
       file_path = 'public_files.json'
-      public_files = manifest(File.join(settings['build_dir'], settings['static_dir']))
+      public_files = manifest(File.join(settings['BUILD_DIR'], settings['STATIC_DIR']))
       json = JSON.pretty_generate(public_files)
       File.write(file_path, json)
       puts "=== Wrote: #{file_path}"
