@@ -19,7 +19,7 @@ function keys(v) {
 }
 
 function is_dev() {
-  if (typeof process !== 'undefined' && process.env.IS_DEVELOPMENT) {
+  if (typeof process !== 'undefined' && (process.env.IS_DEVELOPMENT || process.env.IS_DEV)) {
     return true;
   }
 

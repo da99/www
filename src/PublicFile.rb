@@ -55,16 +55,9 @@ class PublicFile
           'public_path' => new_file.public_path,
           'etag' => new_file.etag[0..ETAG_SIZE],
           'created_at' => new_file.created_at,
-          'base64' => nil,
           'mime_type' => `www mime '#{new_file.raw}'`.strip
         }
 
-        data['base64'] = case data['mime_type']
-                         when /(charset=.+-ascii)|(charset=utf-8)/
-                           File.read(new_file.raw)
-                         else
-                           `base64 -w 0 #{new_file.raw}`.strip
-                         end
         memo[new_file.path.sub(dir, '')] = data
         memo
       end
