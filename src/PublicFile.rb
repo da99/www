@@ -64,7 +64,7 @@ class PublicFile
     end
 
     def write_manifest(settings)
-      file_path = 'tmp/public_files.json'
+      file_path = 'public_files.json'
       public_files = manifest(File.join(settings['build_dir'], settings['static_dir']))
       json = JSON.pretty_generate(public_files)
       File.write(file_path, json)
