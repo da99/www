@@ -116,7 +116,7 @@ case "$*" in
 
   'serve '*)
     set -x
-    bun run "$THIS_DIR"/src/static.serve.ts "$@"
+    bun run "$THIS_DIR"/src/Bun.Serve.ts "$@"
   ;;
 
   'mime '*)
