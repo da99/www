@@ -39,6 +39,8 @@ case "$*" in
   echo "$cmd serve [PORT] [DIR] [CMD] - Run CMD and serve static file."
   echo "$cmd list old|new files"
   echo "$cmd mime [FILE]"
+  echo "$cmd modified manifest for [DIRs...]"
+  echo "     Prints a list of files and their modified times."
   ;;
 
   "upload to bucket"|"setup bucket")
@@ -130,6 +132,13 @@ case "$*" in
         ;;
     esac
   ;;
+
+  'modified manifest for '*)
+    shift; shift; shift
+    while read -r FPATH ; do
+      echo "$FPATH $(stat -c '%y' "$FPATH")"
+    done < <(find "$@" -type f | sort)
+    ;;
   *)
     echo "!!! Unknown command: $*" >&2
     exit 1
