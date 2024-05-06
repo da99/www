@@ -97,7 +97,7 @@ case "$*" in
       --target browser \
       --outdir "$PWD"/public/section \
       --splitting \
-      --chunk-naming "[dir]/[name].mjs" \
+      --chunk-naming "[dir]/lib.[name].[hash].mjs" \
       --entry-naming "[dir]/[name].mjs" \
       $index_mts
     rm $index_mts
