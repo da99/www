@@ -99,8 +99,8 @@ case "$*" in
       --splitting \
       --chunk-naming "[dir]/lib.[name].[hash].mjs" \
       --entry-naming "[dir]/[name].mjs" \
-      "$index_mts"
-    rm "$index_mts"
+      $index_mts
+    rm $index_mts
   ;;
 
   'list new files'|'list old files')
