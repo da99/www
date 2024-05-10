@@ -17,7 +17,7 @@ export const SPLIT_TAG_NAME_PATTERN = /([\.\#])/g
 export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_\-]+)+$/
 export const SPLIT_ID_CLASS_PATTERN = /([\.\#])/g
 
-export const EMAIL_PATTERN = /^[^@]+@[^@]+$/;
+export const EMAIL_PATTERN = /^[^@\.][^@]+@[^@\.]+\.[^@]+[^\.]$/;
 
 export function is_email_valid(x: string) { return !!x.match(EMAIL_PATTERN); }
 
