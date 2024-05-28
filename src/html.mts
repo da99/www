@@ -211,7 +211,7 @@ export function set_css_state(e_id: string, new_class: Custom_Event_Name) {
 }
 
 export function Classy_Events() {
-    THE_BODY.addEventListener('click', on_body_click);
+  THE_BODY.addEventListener('click', on_body_click);
 } // export function
 
 function on_body_click(ev: MouseEvent) {
@@ -237,9 +237,34 @@ function on_body_click(ev: MouseEvent) {
   }
 } // === function
 
+export function Setup_Submit_Buttons() {
+  document.body.addEventListener('click', handle_submit_button);
+}
 
-function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
-  const button = ev.target as HTMLElement;
+function handle_submit_button(ev: MouseEvent) {
+  log(`Event type: ${ev.type}`);
+  const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
+
+  if (!ele)
+    return false;
+
+  if (ele.tagName !== 'BUTTON')
+    return false;
+
+  const button = ele as HTMLButtonElement;
+
+  if (!button.classList.contains('submit')) {
+    warn(`Unknown button type for: ${button}`)
+    return false;
+  }
+
+  ev.preventDefault();
+  ev.stopPropagation();
+  return form_submit(button);
+} // === function
+
+
+function form_submit(button: HTMLButtonElement) {
   const form = button.closest('form');
   if (!form) {
     warn('Form not found for: ' + button.tagName);
@@ -256,8 +281,6 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
 
   const full_action = full_url( action );
 
-  // const headers = ;
-  // headers[X_SENT_FROM] = form.getAttribute('id') || "[NONE]";
   const f_request: FetchRequestInit = {
     method: "POST",
     referrerPolicy: "no-referrer",
@@ -275,7 +298,7 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     do_request: true
   };
 
-  THE_BODY.dispatchEvent(new_custom_event('request', {detail: request}));
+  document.body.dispatchEvent(new_custom_event('request', {detail: request}));
 
   if (!request.do_request)
     return false;
