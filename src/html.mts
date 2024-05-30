@@ -210,42 +210,36 @@ export function set_css_state(e_id: string, new_class: Custom_Event_Name) {
   return THE_BODY;
 }
 
-export function Classy_Events() {
-    THE_BODY.addEventListener('click', on_body_click);
+export function setup_forms() {
+    THE_BODY.addEventListener('click', on_click_submit);
 } // export function
 
-function on_body_click(ev: MouseEvent) {
+function on_click_submit(ev: MouseEvent) {
   log(`Event type: ${ev.type}`);
   const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
 
   if (!ele)
     return false;
 
-  switch (ele.tagName) {
-    case 'A':
-      break;
+  if (ele.tagName !== 'BUTTON')
+    return false;
 
-    case 'BUTTON':
-      const button = ele as HTMLButtonElement;
-      if (!button.classList.contains('submit')) {
-        warn(`Unknown button type for: ${button}`)
-        return false;
-      }
-      ev.preventDefault();
-      ev.stopPropagation();
-      return form_submit(ev);
-  }
-} // === function
+  const button = ele as HTMLButtonElement;
+  if (!button.classList.contains('submit'))
+    return false;
 
-
-function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
-  const button = ev.target as HTMLElement;
   const form = button.closest('form');
   if (!form) {
     warn('Form not found for: ' + button.tagName);
     return false;
   }
 
+  ev.preventDefault();
+  ev.stopPropagation();
+  return submit_form(form);
+} // === function
+
+export function submit_form(form: HTMLFormElement) {
   const form_id = get_id(form);
 
   reset_css_state(form_id, 'loading');
@@ -285,6 +279,7 @@ function form_submit(ev: HTMLElementEventMap[keyof HTMLElementEventMap]) {
     .then((x: Response) => response(request, x))
     .catch((x: any) => network_error(request, x));
   }, 450);
+
   return true;
 } // === function
 
@@ -315,28 +310,28 @@ async function response(req: Request_Origin, raw_resp: Response) {
 
   if (resp.success) {
     set_css_state(form_id, 'success');
-    THE_BODY.dispatchEvent(new_custom_event("success", detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${form_id} success`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`${form_id}_success`, {detail: resp}));
   } else {
     set_css_state(form_id, 'invalid');
-    THE_BODY.dispatchEvent(new_custom_event("invalid", detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${form_id} invalid`, detail));
-    for (const k in resp.fields) {
-      const target = form.querySelector(`label[for='${k}'], input[name='${k}']`);
-      const fieldset = (target && target.closest('fieldset')) || form.querySelector(`fieldset.${k}`);
-      if (fieldset)
-        fieldset.classList.add('invalid');
-    }
+    THE_BODY.dispatchEvent(new CustomEvent(`${form_id}_invalid`, {detail: resp}));
+    invalid_form_fields(form as HTMLFormElement, resp.fields);
   }
 
   return resp;
 } // === function response
 
+export function invalid_form_fields(form: HTMLFormElement, fields: { [index: string]: string }) {
+  for (const k in fields) {
+    const target = form.querySelector(`label[for='${k}'], input[name='${k}']`);
+    const fieldset = (target && target.closest('fieldset')) || form.querySelector(`fieldset.${k}`);
+    if (fieldset)
+      fieldset.classList.add('invalid');
+  }
+  return form;
+}
+
 function server_error(request: Request_Origin, response: Response) {
   warn(`!!! Server Error: ${response.status} - ${response.statusText}`);
-  if (IS_DEV) {
-
-  }
 
   const e = request.element;
   THE_BODY.dispatchEvent(new_custom_event("server-error", {detail: {request, response}}));
