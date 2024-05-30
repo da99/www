@@ -211,7 +211,7 @@ export function set_css_state(e_id: string, new_class: Custom_Event_Name) {
 }
 
 export function setup_forms() {
-    THE_BODY.addEventListener('click', on_click_submit);
+  return THE_BODY.addEventListener('click', on_click_submit);
 } // export function
 
 function on_click_submit(ev: MouseEvent) {
@@ -236,6 +236,7 @@ function on_click_submit(ev: MouseEvent) {
 
   ev.preventDefault();
   ev.stopPropagation();
+
   return submit_form(form);
 } // === function
 
@@ -250,8 +251,6 @@ export function submit_form(form: HTMLFormElement) {
 
   const full_action = full_url( action );
 
-  // const headers = ;
-  // headers[X_SENT_FROM] = form.getAttribute('id') || "[NONE]";
   const f_request: FetchRequestInit = {
     method: "POST",
     referrerPolicy: "no-referrer",
@@ -269,7 +268,7 @@ export function submit_form(form: HTMLFormElement) {
     do_request: true
   };
 
-  THE_BODY.dispatchEvent(new_custom_event('request', {detail: request}));
+  document.body.dispatchEvent(new_custom_event('request', {detail: request}));
 
   if (!request.do_request)
     return false;
