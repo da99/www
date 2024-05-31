@@ -13,6 +13,10 @@ export interface Request_Origin {
   do_request: boolean
 }
 
+export interface Fields_State {
+  [index: string]: string
+}
+
 export interface Response_Origin {
   readonly X_SENT_FROM: string,
   readonly success: boolean,
