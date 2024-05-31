@@ -214,7 +214,7 @@ export function set_css_state(e_id: string, new_class: Custom_Event_Name) {
   return THE_BODY;
 }
 
-export function setup_forms() {
+export function use_default_forms() {
   return THE_BODY.addEventListener('click', on_click_submit);
 } // export function
 
@@ -360,3 +360,44 @@ function network_error(request: Request_Origin, error: any) {
   return false;
 } // === function
 
+function _reload() { return window.location.reload(); };
+
+export function reload_in(n: number) {
+  if (n > -1)
+    return setTimeout(_reload, n);
+  throw new Error(`!!! Invalid value for reload_in: ${n}`);
+}
+
+export function input_numbers_only(selector: string) {
+  return document.querySelectorAll(selector).forEach( (ele) => {
+    ele.addEventListener("keydown", (event: Event) => {
+      const ev = event as KeyboardEvent;
+      switch (ev.key) {
+        case '0':
+          case '1': case '2': case '3': case '4': case '5':
+          case '6': case '7': case '8': case '9':
+          true;
+        break;
+        default:
+          ev.stopPropagation();
+        ev.preventDefault();
+        console.log(ev.key);
+      }
+      // do something
+    })
+  })
+} // === function
+
+
+/*
+  * get_elements('#element')
+  * get_elements('element')
+  * get_elements(div)
+  *
+  */
+export function get_elements(s: string) {
+  const first = s.charAt(0);
+  if (first === '#' || first === '.' || s.indexOf(' ') > 0)
+    return document.querySelectorAll(s);
+  return document.getElementById(s);
+}
