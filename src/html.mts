@@ -1,8 +1,9 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 // import type { Attributes } from './base.mts';
-export const Request_States = ['request', 'network_error', 'server_error', 'response', 'ok', 'invalid', 'loading'];
-export type Custom_Event_Name = 'request' | 'network_error' | 'server_error' | 'response' | 'ok' | 'invalid' | 'loading'
+export const Response_States = ['ok', 'invalid', 'try_again', 'expired'] as const;
+export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
+
 export interface Custom_Event_Detail<T> extends Event {
   detail: T
 }
@@ -22,20 +23,9 @@ export interface Fields_State {
   [index: string]: string
 }
 
-export interface Custom_Event_Data {
-  e: Element,
-  coll: Array<Element>,
-  fields: Fields_State
-}
-
-export interface RR_Context {
-  element: Element,
-  collection: | NodeList
-}
-
 export interface Response_Origin {
   readonly X_SENT_FROM: string,
-  readonly status: 'ok' | 'invalid',
+  readonly status: typeof Response_States[number],
   readonly fields: {
     [index: string]: string
   }
@@ -64,10 +54,6 @@ export function warn(...args: any[]) {
     return false;
 
   return console.warn(...args);
-}
-
-function new_custom_event<T>(name: Custom_Event_Name, data: Custom_Event_Detail<T>) {
-  return new CustomEvent(name, data);
 }
 
 export function fragment(...eles: (string | Element)[]) {
@@ -206,10 +192,10 @@ function full_url(x: string): string {
   return url.toString();
 }
 
-export function reset_css_state(e_id: string, new_class?: Custom_Event_Name) {
+export function reset_css_state(e_id: string, new_class?: CSS_Types) {
   const e = document.querySelector(`#${e_id}`);
 
-  for (const s of Request_States) {
+  for (const s of States) {
     THE_BODY.classList.remove(`${e_id}-${s}`);
     if (e)
       e.classList.remove(s);
@@ -221,7 +207,7 @@ export function reset_css_state(e_id: string, new_class?: Custom_Event_Name) {
   return e;
 }
 
-export function set_css_state(e_id: string, new_class: Custom_Event_Name) {
+export function set_css_state(e_id: string, new_class: Allowed_States) {
   THE_BODY.classList.add(`${e_id}-${new_class}`);
   const e = document.querySelector(`#${e_id}`);
   if (e) {
@@ -351,7 +337,7 @@ export function input_numbers_only(selector: string) {
 export function hide(e: Element) { return e.classList.add('hide'); }
 export function unhide(e: Element) { return e.classList.remove('hide'); }
 
-export function dom_it(f: (e: Element) => void, ...args: Array<string | Partial<Custom_Event_Data>>) {
+export function dom_it(f: (e: Element) => void, ...args: Array<string | Element>) {
   const a_max = args.length;
   for (let a_i = 0; a_i < a_max; a_i++) {
     const x = args[a_i];
@@ -361,16 +347,7 @@ export function dom_it(f: (e: Element) => void, ...args: Array<string | Partial<
       continue;
     }
 
-    if (x.e) {
-      f(x.e);
-      continue;
-    }
-
-    if (x.coll) {
-      const max = x.coll.length;
-      for (let i = 0; i < max; i++)
-      f(x.coll[i]);
-    }
+    f(x);
   }
 }
 
