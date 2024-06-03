@@ -1,20 +1,36 @@
 
 // type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
 // import type { Attributes } from './base.mts';
-export const Request_States = ['request', 'network-error', 'server-error', 'response', 'success', 'invalid', 'loading'];
-export type Custom_Event_Name = 'request' | 'network-error' | 'server-error' | 'response' | 'success' | 'invalid' | 'loading'
-export interface Custom_Event_Detail<T> {
+export const Request_States = ['request', 'network_error', 'server_error', 'response', 'ok', 'invalid', 'loading'];
+export type Custom_Event_Name = 'request' | 'network_error' | 'server_error' | 'response' | 'ok' | 'invalid' | 'loading'
+export interface Custom_Event_Detail<T> extends Event {
   detail: T
+}
+
+export interface Network_Error_Origin {
+  error: any,
+  request: Request_Origin
 }
 
 export interface Request_Origin {
   readonly request: FetchRequestInit,
-  readonly element: HTMLElement,
+  readonly element_id: string,
   do_request: boolean
 }
 
 export interface Fields_State {
   [index: string]: string
+}
+
+export interface Custom_Event_Data {
+  e: Element,
+  coll: Array<Element>,
+  fields: Fields_State
+}
+
+export interface RR_Context {
+  element: Element,
+  collection: | NodeList
 }
 
 export interface Response_Origin {
@@ -268,19 +284,19 @@ export function submit_form(form: HTMLFormElement) {
 
   const request: Request_Origin = {
     request: f_request,
-    element: form,
+    element_id: get_id(form),
     do_request: true
   };
 
-  document.body.dispatchEvent(new_custom_event('request', {detail: request}));
+  dispatch.request(request);
 
   if (!request.do_request)
     return false;
 
   setTimeout(async () => {
     return fetch(full_action, f_request)
-    .then((x: Response) => response(request, x))
-    .catch((x: any) => network_error(request, x));
+    .then((resp: Response) => dispatch.response(request, resp))
+    .catch((err: any) => dispatch.network_error(err, request));
   }, 450);
 
   return true;
@@ -290,38 +306,6 @@ export function submit_form(form: HTMLFormElement) {
 //   e.classList.remove('loading');
 // }
 
-async function response(req: Request_Origin, raw_resp: Response) {
-  if (!raw_resp.ok)
-    return server_error(req, raw_resp);
-
-  const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
-
-  if (!resp[X_SENT_FROM]) {
-    warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
-    return resp;
-  }
-
-  // form_loaded(req.element)
-  const form_id = req.element.id;
-  const form = req.element;
-  reset_css_state(form_id);
-
-  const detail: Custom_Event_Detail<Response_Detail> = {detail: {response: resp, request: req}};
-
-
-  THE_BODY.dispatchEvent(new_custom_event("response", detail));
-
-  if (resp.success) {
-    set_css_state(form_id, 'success');
-    THE_BODY.dispatchEvent(new CustomEvent(`${form_id}_success`, {detail: resp}));
-  } else {
-    set_css_state(form_id, 'invalid');
-    THE_BODY.dispatchEvent(new CustomEvent(`${form_id}_invalid`, {detail: resp}));
-    invalid_form_fields(form as HTMLFormElement, resp.fields);
-  }
-
-  return resp;
-} // === function response
 
 export function invalid_form_fields(form: HTMLFormElement, fields: { [index: string]: string }) {
   for (const k in fields) {
@@ -333,32 +317,7 @@ export function invalid_form_fields(form: HTMLFormElement, fields: { [index: str
   return form;
 }
 
-function server_error(request: Request_Origin, response: Response) {
-  warn(`!!! Server Error: ${response.status} - ${response.statusText}`);
 
-  const e = request.element;
-  THE_BODY.dispatchEvent(new_custom_event("server-error", {detail: {request, response}}));
-  if (e as HTMLElement) {
-    reset_css_state(e.id, 'server-error')
-    THE_BODY.dispatchEvent(new CustomEvent(`${e.id} server-error`, {detail: {request, response}}));
-    return true;
-  }
-  return false;
-} // === function request_invalid
-
-function network_error(request: Request_Origin, error: any) {
-  warn(error);
-  warn(`!!! Network error: ${error.message}`);
-  const e = request.element;
-  if (e as HTMLElement) {
-    reset_css_state(e.id, 'network-error')
-    THE_BODY.dispatchEvent(new_custom_event('network-error', {detail: {error, request}}));
-    THE_BODY.dispatchEvent(new CustomEvent(`${e.id} network-error`, {detail: {error, request}}));
-    return true;
-  }
-
-  return false;
-} // === function
 
 function _reload() { return window.location.reload(); };
 
@@ -389,15 +348,154 @@ export function input_numbers_only(selector: string) {
 } // === function
 
 
-/*
-  * get_elements('#element')
-  * get_elements('element')
-  * get_elements(div)
-  *
-  */
-export function get_elements(s: string) {
-  const first = s.charAt(0);
-  if (first === '#' || first === '.' || s.indexOf(' ') > 0)
-    return document.querySelectorAll(s);
+
+
+export function hide(e: Element) { return e.classList.add('hide'); }
+export function unhide(e: Element) { return e.classList.remove('hide'); }
+
+export function dom_it(f: (e: Element) => void, ...args: Array<string | Partial<Custom_Event_Data>>) {
+  const a_max = args.length;
+  for (let a_i = 0; a_i < a_max; a_i++) {
+    const x = args[a_i];
+
+    if (typeof x === 'string') {
+      document.querySelectorAll(x).forEach(f);
+      continue;
+    }
+
+    if (x.e) {
+      f(x.e);
+      continue;
+    }
+
+    if (x.coll) {
+      const max = x.coll.length;
+      for (let i = 0; i < max; i++)
+      f(x.coll[i]);
+    }
+  }
+}
+
+export const dispatch = {
+
+  request(req: Request_Origin) {
+    THE_BODY.dispatchEvent(new CustomEvent(`* request`, {detail: req}));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.element_id} request`, {detail: req}));
+  },
+
+  async response(req: Request_Origin, raw_resp: Response) {
+    if (!raw_resp.ok)
+      return dispatch.server_error(req, raw_resp);
+
+    const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
+
+    if (!resp[X_SENT_FROM]) {
+      warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
+      return resp;
+    }
+
+    const form_id = req.element_id;
+    const form = document.getElementById(form_id);
+
+    const detail = {detail: {response: resp, request: req}};
+
+    THE_BODY.dispatchEvent(new CustomEvent('* response', detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} response`, detail));
+
+    if (form) {
+      reset_css_state(form_id);
+    }
+
+    if (resp.success) {
+      set_css_state(form_id, 'ok');
+      THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
+      THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} ok`, detail));
+    } else {
+      set_css_state(form_id, 'invalid');
+      THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
+      THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} invalid`, detail));
+      invalid_form_fields(form as HTMLFormElement, resp.fields);
+    }
+  },
+
+  server_error(req: Request_Origin, raw_resp: Response) {
+    warn(`!!! Server Error: ${raw_resp.status} - ${raw_resp.statusText}`);
+
+    const e = e_id(req.element_id);
+    if (e) {
+      reset_css_state(e.id, 'server_error')
+      const detail = {detail: {request: req, response: raw_resp}};
+      THE_BODY.dispatchEvent(new CustomEvent('* server_error', detail));
+      THE_BODY.dispatchEvent(new CustomEvent(`#${e.id} server_error`, detail));
+      return true;
+    }
+    return false;
+  },
+
+  network_error(error: any, request: Request_Origin) {
+    warn(error);
+    warn(`!!! Network error: ${error.message}`);
+    const detail = {detail: {error, request}};
+    THE_BODY.dispatchEvent(new CustomEvent('* network_error', detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${request.element_id} network_error`, detail));
+
+    const e = e_id(request.element_id);
+    if (e) {
+      reset_css_state(e.id, 'network_error')
+      return true;
+    }
+
+    return false;
+  } // === function
+}; // export dispatch
+
+export const on = {
+  request(selector: string, f: (req: Request_Origin) => void) {
+    THE_BODY.addEventListener('request', function (ev: Event) {
+      const cev = ev as Custom_Event_Detail<Request_Origin>;
+      const req = cev.detail;
+      if (selector === '*' || selector === req.element_id)
+        f(req);
+    });
+  },
+  response(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
+    THE_BODY.addEventListener('response', function (ev: Event) {
+      const cev = ev as Custom_Event_Detail<Response_Detail>
+      const resp = cev.detail.response;
+      const req = cev.detail.request;
+      if (selector == '*' || selector === req.element_id)
+        f(resp, req);
+    });
+  },
+  network_error(selector: string, f: (req: Request_Origin, err: any) => void) {
+    THE_BODY.addEventListener(`${selector} network_error`, (ev: Event) => {
+      const cev = ev as Custom_Event_Detail<Network_Error_Origin>;
+      f(cev.detail.error, cev.detail.request);
+    })
+  },
+  server_error(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
+    THE_BODY.addEventListener(`${selector} server_error`, (ev: Event) => {
+      const cev = ev as Custom_Event_Detail<Response_Detail>;
+      f(cev.detail.response, cev.detail.request);
+    });
+  },
+  ok(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
+    THE_BODY.addEventListener(`${selector} ok`, (ev: Event) => {
+      const cev = ev as Custom_Event_Detail<Response_Detail>;
+      f(cev.detail.response, cev.detail.request);
+    });
+  },
+  invalid(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
+    THE_BODY.addEventListener(`${selector} invalid`, (ev: Event) => {
+      const cev = ev as Custom_Event_Detail<Response_Detail>;
+      f(cev.detail.response, cev.detail.request);
+    });
+  }
+}; // export on
+
+// function default_request_handle(ev: Event) {
+//   const cev = ev as Custom_Event_Detail<Request_Origin>;
+// }
+export function e_id(s: string) {
   return document.getElementById(s);
 }
