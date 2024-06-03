@@ -3,6 +3,7 @@
 // import type { Attributes } from './base.mts';
 export const Response_States = ['ok', 'invalid', 'try_again', 'expired'] as const;
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
+export const CSS_States = [...Response_States, ...Event_States] as const;
 
 export interface Custom_Event_Detail<T> extends Event {
   detail: T
@@ -192,13 +193,13 @@ function full_url(x: string): string {
   return url.toString();
 }
 
-export function reset_css_state(e_id: string, new_class?: CSS_Types) {
+export function reset_css_state(e_id: string, new_class?: typeof CSS_States[number]) {
   const e = document.querySelector(`#${e_id}`);
 
-  for (const s of States) {
-    THE_BODY.classList.remove(`${e_id}-${s}`);
-    if (e)
+  if (e) {
+    for (const s of CSS_States) {
       e.classList.remove(s);
+    }
   }
 
   if (new_class)
@@ -207,7 +208,7 @@ export function reset_css_state(e_id: string, new_class?: CSS_Types) {
   return e;
 }
 
-export function set_css_state(e_id: string, new_class: Allowed_States) {
+export function set_css_state(e_id: string, new_class: typeof CSS_States[number]) {
   THE_BODY.classList.add(`${e_id}-${new_class}`);
   const e = document.querySelector(`#${e_id}`);
   if (e) {
