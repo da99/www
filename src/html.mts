@@ -35,7 +35,7 @@ export interface RR_Context {
 
 export interface Response_Origin {
   readonly X_SENT_FROM: string,
-  readonly success: boolean,
+  readonly status: 'ok' | 'invalid',
   readonly fields: {
     [index: string]: string
   }
@@ -317,8 +317,6 @@ export function invalid_form_fields(form: HTMLFormElement, fields: { [index: str
   return form;
 }
 
-
-
 function _reload() { return window.location.reload(); };
 
 export function reload_in(n: number) {
@@ -406,16 +404,28 @@ export const dispatch = {
       reset_css_state(form_id);
     }
 
-    if (resp.success) {
-      set_css_state(form_id, 'ok');
-      THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
-      THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} ok`, detail));
-    } else {
-      set_css_state(form_id, 'invalid');
-      THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
-      THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} invalid`, detail));
-      invalid_form_fields(form as HTMLFormElement, resp.fields);
+    if (resp.status === 'ok') {
+      return dispatch.ok(resp, req);
     }
+
+    dispatch.invalid(resp, req);
+  },
+
+  ok(resp: Response_Origin, req: Request_Origin) {
+    const detail = {detail: {response: resp, request: req}};
+    set_css_state(`#${req.element_id}`, 'ok');
+    THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${req.element_id} ok`, detail));
+  },
+
+  invalid(resp: Response_Origin, req: Request_Origin) {
+    const detail = {detail: {response: resp, request: req}};
+    set_css_state(req.element_id, 'invalid');
+    const form = document.getElementById(req.element_id);
+    if (form)
+      invalid_form_fields(form as HTMLFormElement, resp.fields);
+    THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${req.element_id} invalid`, detail));
   },
 
   server_error(req: Request_Origin, raw_resp: Response) {
