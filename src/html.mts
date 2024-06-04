@@ -173,6 +173,20 @@ export const dom = {
       e.setAttribute('id', new_id);
       return new_id;
     }
+  },
+
+  do(f: (e: Element) => void, ...args: Array<string | Element>) {
+    const a_max = args.length;
+    for (let a_i = 0; a_i < a_max; a_i++) {
+      const x = args[a_i];
+
+      if (typeof x === 'string') {
+        document.querySelectorAll(x).forEach(f);
+        continue;
+      }
+
+      f(x);
+    }
   }
 
 }; // export const
@@ -185,8 +199,23 @@ function full_url(x: string): string {
 }
 
 export const css = {
-  hide(e: Element) { return e.classList.add('hide'); },
-  unhide(e: Element) { return e.classList.remove('hide'); },
+  do(f: (e: Element) => void, ...args: Array<string | Element>) {
+    for (const x of args) {
+      if (typeof x === 'string')
+        document.querySelectorAll(x).forEach(f)
+      else
+        f(x);
+    }
+    return args;
+  },
+
+  hide(...args: Array<Element | string>) {
+    return css.do(e => e.classList.add('hide'), ...args);
+  },
+
+  unhide(...args: Array<Element | string>) {
+    return css.do(e => e.classList.remove('hide'), ...args);
+  },
 
   reset(e_id: string, new_class?: typeof CSS_States[number]) {
     const e = document.querySelector(`#${e_id}`);
@@ -310,57 +339,44 @@ export const form = {
     }, 450);
 
     return true;
+  }, // === function
+
+  event_allow_only_numbers(event: Event) {
+        const ev = event as KeyboardEvent;
+        switch (ev.key) {
+          case '0':
+            case '1': case '2': case '3': case '4': case '5':
+            case '6': case '7': case '8': case '9':
+            true;
+          break;
+          default:
+            ev.stopPropagation();
+          ev.preventDefault();
+        }
+        // do something
+  },
+
+  input_only_numbers(selector: string) {
+    return document.querySelectorAll(selector).forEach(
+      e => e.addEventListener('keydown', form.event_allow_only_numbers)
+    );
   } // === function
 }; // export const
 
 
-// function form_loading(e: HTMLElement) {
-//   e.classList.remove('loading');
-// }
+export const page = {
+  reload(n?: number) {
+    if (typeof n !== 'number')
+      return window.location.reload();
 
-function _reload() { return window.location.reload(); };
+    if (n < 0)
+      throw new Error(`!!! Invalid value for reload_in: ${n}`);
 
-export function reload_in(n: number) {
-  if (n > -1)
-    return setTimeout(_reload, n);
-  throw new Error(`!!! Invalid value for reload_in: ${n}`);
-}
-
-export function input_numbers_only(selector: string) {
-  return document.querySelectorAll(selector).forEach( (ele) => {
-    ele.addEventListener("keydown", (event: Event) => {
-      const ev = event as KeyboardEvent;
-      switch (ev.key) {
-        case '0':
-          case '1': case '2': case '3': case '4': case '5':
-          case '6': case '7': case '8': case '9':
-          true;
-        break;
-        default:
-          ev.stopPropagation();
-        ev.preventDefault();
-        console.log(ev.key);
-      }
-      // do something
-    })
-  })
-} // === function
-
-
-
-export function dom_it(f: (e: Element) => void, ...args: Array<string | Element>) {
-  const a_max = args.length;
-  for (let a_i = 0; a_i < a_max; a_i++) {
-    const x = args[a_i];
-
-    if (typeof x === 'string') {
-      document.querySelectorAll(x).forEach(f);
-      continue;
-    }
-
-    f(x);
+    setTimeout(page.reload, n * 1000);
+    return;
   }
-}
+};
+
 
 export const dispatch = {
 
