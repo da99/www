@@ -1,6 +1,4 @@
 
-// type Attributes = Partial<HTMLElement | HTMLAnchorElement | HTMLInputElement | HTMLLabelElement>;
-// import type { Attributes } from './base.mts';
 export const Response_States = ['ok', 'invalid', 'try_again', 'expired'] as const;
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
 export const CSS_States = [...Response_States, ...Event_States] as const;
@@ -38,9 +36,9 @@ export interface Response_Detail {
 }
 
 const THE_BODY = document.body;
-export const IS_DEV = window.location.href.indexOf('http://localhost:') === 0;
+export const IS_DEV = window.location.href.indexOf('://localhost:') > 0;
 
-import { X_SENT_FROM, is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
+import { is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
 
 export function log(...args: any[]) {
   if (!IS_DEV)
@@ -154,19 +152,6 @@ function set_attrs(ele: Element, attrs: any) {
   return ele;
 }
 
-export function form_data(f: HTMLFormElement) {
-  const raw_data = new FormData(f);
-  const data: any = {};
-  for (let [k,v] of raw_data.entries()) {
-    if (data.hasOwnProperty(k)) {
-      if(!Array.isArray(data[k]))
-        data[k] = [data[k]];
-      data[k].push(v);
-    } else
-      data[k] = v;
-  }
-  return data;
-} // export function
 
 export const dom = {
 
@@ -245,6 +230,20 @@ export const form = {
     return form;
   },
 
+  data(f: HTMLFormElement) {
+    const raw_data = new FormData(f);
+    const data: any = {};
+    for (let [k,v] of raw_data.entries()) {
+      if (data.hasOwnProperty(k)) {
+        if(!Array.isArray(data[k]))
+          data[k] = [data[k]];
+        data[k].push(v);
+      } else
+        data[k] = v;
+    }
+    return data;
+  }, // export function
+
   on_click_submit(ev: MouseEvent) {
     log(`Event type: ${ev.type}`);
     const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
@@ -271,12 +270,12 @@ export const form = {
     return form.submit(e_form);
   }, // === function
 
-  submit(form: HTMLFormElement) {
-    const form_id = dom.id.upsert(form);
+  submit(e: HTMLFormElement) {
+    const form_id = dom.id.upsert(e);
 
     css.reset(form_id, 'loading');
 
-    const action = form.getAttribute('action');
+    const action = e.getAttribute('action');
     if (!action)
       throw new Error(`action attribute not set for ${form_id}`);
 
@@ -288,14 +287,14 @@ export const form = {
       cache: "no-cache",
       headers: {
         "Content-Type": "application/json",
-        X_SENT_FROM: dom.id.upsert(form)
+        X_SENT_FROM: dom.id.upsert(e)
       },
-      body: JSON.stringify(form_data(form))
+      body: JSON.stringify(form.data(e))
     };
 
     const request: Request_Origin = {
       request: f_request,
-      element_id: dom.id.upsert(form),
+      element_id: dom.id.upsert(e),
       do_request: true
     };
 
@@ -376,8 +375,8 @@ export const dispatch = {
 
     const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
 
-    if (!resp[X_SENT_FROM]) {
-      warn(`${X_SENT_FROM} key not found in response: ${Object.keys(resp).join(', ')}`);
+    if (!resp['X_SENT_FROM']) {
+      warn(`X_SENT_FROM key not found in response: ${Object.keys(resp).join(', ')}`);
       return resp;
     }
 
