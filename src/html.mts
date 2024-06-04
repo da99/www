@@ -5,6 +5,10 @@ export const Response_States = ['ok', 'invalid', 'try_again', 'expired'] as cons
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
 export const CSS_States = [...Response_States, ...Event_States] as const;
 
+export interface Fields_State {
+  [index: string]: string
+}
+
 export interface Custom_Event_Detail<T> extends Event {
   detail: T
 }
@@ -18,10 +22,6 @@ export interface Request_Origin {
   readonly request: FetchRequestInit,
   readonly element_id: string,
   do_request: boolean
-}
-
-export interface Fields_State {
-  [index: string]: string
 }
 
 export interface Response_Origin {
@@ -39,7 +39,6 @@ export interface Response_Detail {
 
 const THE_BODY = document.body;
 export const IS_DEV = window.location.href.indexOf('http://localhost:') === 0;
-
 
 import { X_SENT_FROM, is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
 
@@ -169,23 +168,30 @@ export function form_data(f: HTMLFormElement) {
   return data;
 } // export function
 
-export function update_id_count() {
-  let current_id_count =  THE_BODY.getAttribute('data-id-count') || "-1";
-  const new_id = parseInt(current_id_count) + 1;
-  THE_BODY.setAttribute('data-id-count', new_id.toString());
-  return new_id;
-}
+export const dom = {
 
-// Gets id attribute of element.
-// Creates an id if it is missing.
-export function get_id(e: HTMLElement): string {
-  const id = e.getAttribute('id');
-  if (id)
-    return id;
-  const new_id = `${e.tagName}_${update_id_count()}`
-  e.setAttribute('id', new_id);
-  return new_id;
-}
+  id: {
+    __plus_one(): number {
+      let current_id_count =  THE_BODY.getAttribute('data-id-count') || "-1";
+      const new_id = parseInt(current_id_count) + 1;
+      THE_BODY.setAttribute('data-id-count', new_id.toString());
+      return new_id;
+    },
+
+    // Gets id attribute of element.
+    // Creates an id if it is missing.
+    upsert(e: HTMLElement): string {
+      const id = e.getAttribute('id');
+      if (id)
+        return id;
+      const new_id = `${e.tagName}_${dom.id.__plus_one()}`
+      e.setAttribute('id', new_id);
+      return new_id;
+    }
+  }
+
+}; // export const
+
 
 function full_url(x: string): string {
   const url = new URL(location.toString());
@@ -193,116 +199,125 @@ function full_url(x: string): string {
   return url.toString();
 }
 
-export function reset_css_state(e_id: string, new_class?: typeof CSS_States[number]) {
-  const e = document.querySelector(`#${e_id}`);
+export const css = {
+  hide(e: Element) { return e.classList.add('hide'); },
+  unhide(e: Element) { return e.classList.remove('hide'); },
 
-  if (e) {
-    for (const s of CSS_States) {
-      e.classList.remove(s);
+  reset(e_id: string, new_class?: typeof CSS_States[number]) {
+    const e = document.querySelector(`#${e_id}`);
+
+    if (e) {
+      for (const s of CSS_States) {
+        e.classList.remove(s);
+      }
+
+      if (new_class)
+        css.set(e_id, new_class);
     }
+
+    return e;
+  },
+
+  set(e_id: string, new_class: typeof CSS_States[number]) {
+    THE_BODY.classList.add(`${e_id}-${new_class}`);
+    const e = document.querySelector(`#${e_id}`);
+    if (e)
+      e.classList.add(new_class);
+
+    return THE_BODY;
   }
 
-  if (new_class)
-    set_css_state(e_id, new_class);
-
-  return e;
-}
-
-export function set_css_state(e_id: string, new_class: typeof CSS_States[number]) {
-  THE_BODY.classList.add(`${e_id}-${new_class}`);
-  const e = document.querySelector(`#${e_id}`);
-  if (e) {
-    e.classList.add(new_class);
-  }
-  return THE_BODY;
-}
+}; // export const
 
 export function use_default_forms() {
-  return THE_BODY.addEventListener('click', on_click_submit);
+  return THE_BODY.addEventListener('click', form.on_click_submit);
 } // export function
 
-function on_click_submit(ev: MouseEvent) {
-  log(`Event type: ${ev.type}`);
-  const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
+export const form = {
 
-  if (!ele)
-    return false;
+  invalid_fields(form: HTMLFormElement, fields: { [index: string]: string }) {
+    for (const k in fields) {
+      const target = form.querySelector(`label[for='${k}'], input[name='${k}']`);
+      const fieldset = (target && target.closest('fieldset')) || form.querySelector(`fieldset.${k}`);
+      if (fieldset)
+        fieldset.classList.add('invalid');
+    }
+    return form;
+  },
 
-  if (ele.tagName !== 'BUTTON')
-    return false;
+  on_click_submit(ev: MouseEvent) {
+    log(`Event type: ${ev.type}`);
+    const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
 
-  const button = ele as HTMLButtonElement;
-  if (!button.classList.contains('submit'))
-    return false;
+    if (!ele)
+      return false;
 
-  const form = button.closest('form');
-  if (!form) {
-    warn('Form not found for: ' + button.tagName);
-    return false;
-  }
+    if (ele.tagName !== 'BUTTON')
+      return false;
 
-  ev.preventDefault();
-  ev.stopPropagation();
+    const button = ele as HTMLButtonElement;
+    if (!button.classList.contains('submit'))
+      return false;
 
-  return submit_form(form);
-} // === function
+    const e_form = button.closest('form');
+    if (!e_form) {
+      warn('Form not found for: ' + button.tagName);
+      return false;
+    }
 
-export function submit_form(form: HTMLFormElement) {
-  const form_id = get_id(form);
+    ev.preventDefault();
+    ev.stopPropagation();
 
-  reset_css_state(form_id, 'loading');
+    return form.submit(e_form);
+  }, // === function
 
-  const action = form.getAttribute('action');
-  if (!action)
-    throw new Error(`action attribute not set for ${form_id}`);
+  submit(form: HTMLFormElement) {
+    const form_id = dom.id.upsert(form);
 
-  const full_action = full_url( action );
+    css.reset(form_id, 'loading');
 
-  const f_request: FetchRequestInit = {
-    method: "POST",
-    referrerPolicy: "no-referrer",
-    cache: "no-cache",
-    headers: {
-      "Content-Type": "application/json",
-      X_SENT_FROM: get_id(form)
-    },
-    body: JSON.stringify(form_data(form))
-  };
+    const action = form.getAttribute('action');
+    if (!action)
+      throw new Error(`action attribute not set for ${form_id}`);
 
-  const request: Request_Origin = {
-    request: f_request,
-    element_id: get_id(form),
-    do_request: true
-  };
+    const full_action = full_url( action );
 
-  dispatch.request(request);
+    const f_request: FetchRequestInit = {
+      method: "POST",
+      referrerPolicy: "no-referrer",
+      cache: "no-cache",
+      headers: {
+        "Content-Type": "application/json",
+        X_SENT_FROM: dom.id.upsert(form)
+      },
+      body: JSON.stringify(form_data(form))
+    };
 
-  if (!request.do_request)
-    return false;
+    const request: Request_Origin = {
+      request: f_request,
+      element_id: dom.id.upsert(form),
+      do_request: true
+    };
 
-  setTimeout(async () => {
-    return fetch(full_action, f_request)
-    .then((resp: Response) => dispatch.response(request, resp))
-    .catch((err: any) => dispatch.network_error(err, request));
-  }, 450);
+    dispatch.request(request);
 
-  return true;
-} // === function
+    if (!request.do_request)
+      return false;
+
+    setTimeout(async () => {
+      return fetch(full_action, f_request)
+      .then((resp: Response) => dispatch.response(request, resp))
+      .catch((err: any) => dispatch.network_error(err, request));
+    }, 450);
+
+    return true;
+  } // === function
+}; // export const
+
 
 // function form_loading(e: HTMLElement) {
 //   e.classList.remove('loading');
 // }
-
-
-export function invalid_form_fields(form: HTMLFormElement, fields: { [index: string]: string }) {
-  for (const k in fields) {
-    const target = form.querySelector(`label[for='${k}'], input[name='${k}']`);
-    const fieldset = (target && target.closest('fieldset')) || form.querySelector(`fieldset.${k}`);
-    if (fieldset)
-      fieldset.classList.add('invalid');
-  }
-  return form;
-}
 
 function _reload() { return window.location.reload(); };
 
@@ -333,10 +348,6 @@ export function input_numbers_only(selector: string) {
 } // === function
 
 
-
-
-export function hide(e: Element) { return e.classList.add('hide'); }
-export function unhide(e: Element) { return e.classList.remove('hide'); }
 
 export function dom_it(f: (e: Element) => void, ...args: Array<string | Element>) {
   const a_max = args.length;
@@ -379,7 +390,7 @@ export const dispatch = {
     THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} response`, detail));
 
     if (form) {
-      reset_css_state(form_id);
+      css.reset(form_id);
     }
 
     if (resp.status === 'ok') {
@@ -391,17 +402,17 @@ export const dispatch = {
 
   ok(resp: Response_Origin, req: Request_Origin) {
     const detail = {detail: {response: resp, request: req}};
-    set_css_state(`#${req.element_id}`, 'ok');
+    css.set(`#${req.element_id}`, 'ok');
     THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
     THE_BODY.dispatchEvent(new CustomEvent(`#${req.element_id} ok`, detail));
   },
 
   invalid(resp: Response_Origin, req: Request_Origin) {
     const detail = {detail: {response: resp, request: req}};
-    set_css_state(req.element_id, 'invalid');
-    const form = document.getElementById(req.element_id);
-    if (form)
-      invalid_form_fields(form as HTMLFormElement, resp.fields);
+    css.set(req.element_id, 'invalid');
+    const e_form = document.getElementById(req.element_id);
+    if (e_form)
+      form.invalid_fields(e_form as HTMLFormElement, resp.fields);
     THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
     THE_BODY.dispatchEvent(new CustomEvent(`#${req.element_id} invalid`, detail));
   },
@@ -411,7 +422,7 @@ export const dispatch = {
 
     const e = e_id(req.element_id);
     if (e) {
-      reset_css_state(e.id, 'server_error')
+      css.reset(e.id, 'server_error')
       const detail = {detail: {request: req, response: raw_resp}};
       THE_BODY.dispatchEvent(new CustomEvent('* server_error', detail));
       THE_BODY.dispatchEvent(new CustomEvent(`#${e.id} server_error`, detail));
@@ -429,7 +440,7 @@ export const dispatch = {
 
     const e = e_id(request.element_id);
     if (e) {
-      reset_css_state(e.id, 'network_error')
+      css.reset(e.id, 'network_error')
       return true;
     }
 
@@ -446,6 +457,7 @@ export const on = {
         f(req);
     });
   },
+
   response(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
     THE_BODY.addEventListener('response', function (ev: Event) {
       const cev = ev as Custom_Event_Detail<Response_Detail>
@@ -455,24 +467,28 @@ export const on = {
         f(resp, req);
     });
   },
+
   network_error(selector: string, f: (req: Request_Origin, err: any) => void) {
     THE_BODY.addEventListener(`${selector} network_error`, (ev: Event) => {
       const cev = ev as Custom_Event_Detail<Network_Error_Origin>;
       f(cev.detail.error, cev.detail.request);
     })
   },
+
   server_error(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
     THE_BODY.addEventListener(`${selector} server_error`, (ev: Event) => {
       const cev = ev as Custom_Event_Detail<Response_Detail>;
       f(cev.detail.response, cev.detail.request);
     });
   },
+
   ok(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
     THE_BODY.addEventListener(`${selector} ok`, (ev: Event) => {
       const cev = ev as Custom_Event_Detail<Response_Detail>;
       f(cev.detail.response, cev.detail.request);
     });
   },
+
   invalid(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
     THE_BODY.addEventListener(`${selector} invalid`, (ev: Event) => {
       const cev = ev as Custom_Event_Detail<Response_Detail>;
