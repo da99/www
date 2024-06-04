@@ -165,7 +165,7 @@ export const dom = {
 
     // Gets id attribute of element.
     // Creates an id if it is missing.
-    upsert(e: HTMLElement): string {
+    upsert(e: Element): string {
       const id = e.getAttribute('id');
       if (id)
         return id;
@@ -191,12 +191,6 @@ export const dom = {
 
 }; // export const
 
-
-function full_url(x: string): string {
-  const url = new URL(location.toString());
-  url.pathname = x;
-  return url.toString();
-}
 
 export const css = {
   do(f: (e: Element) => void, ...args: Array<string | Element>) {
@@ -308,7 +302,7 @@ export const form = {
     if (!action)
       throw new Error(`action attribute not set for ${form_id}`);
 
-    const full_action = full_url( action );
+    const full_action = page.full_url( action );
 
     const f_request: FetchRequestInit = {
       method: "POST",
@@ -365,14 +359,20 @@ export const form = {
 
 
 export const page = {
-  reload(n?: number) {
-    if (typeof n !== 'number')
+  full_url(x: string): string {
+    const url = new URL(location.toString());
+    url.pathname = x;
+    return url.toString();
+  },
+
+  reload(seconds?: number) {
+    if (typeof seconds !== 'number')
       return window.location.reload();
 
-    if (n < 0)
-      throw new Error(`!!! Invalid value for reload_in: ${n}`);
+    if (seconds < 0)
+      throw new Error(`!!! Invalid value for reload_in: ${seconds}`);
 
-    setTimeout(page.reload, n * 1000);
+    setTimeout(page.reload, seconds * 1000);
     return;
   }
 };
@@ -462,6 +462,15 @@ export const dispatch = {
     return false;
   } // === function
 }; // export dispatch
+
+const KEEP_RETRYING_THESE: { [index:string]: number } = {};
+
+export const http = {
+  retry_until_ok(seconds: number, selector: string | Element) {
+    if (typeof selector === 'string')
+      document.querySelectorAll(selector).forEach(e => KEEP_RETRYING_THESE[dom.id.upsert(e)] = seconds)
+  }
+}; // export const
 
 export const on = {
   request(selector: string, f: (req: Request_Origin) => void) {
