@@ -187,6 +187,33 @@ export const dom = {
 
       f(x);
     }
+  },
+
+  to_element(x: string | HTMLElement) {
+    if (typeof x === 'string') {
+      const ele = document.getElementById(x);
+      if (ele)
+        return ele;
+      return false;
+    }
+    return x;
+  },
+
+  fetch(x: string | HTMLElement, data?: { [index: string]: any }) {
+    const e = dom.to_element(x);
+    if (!e)
+      return false;
+
+    const dom_id = dom.id.upsert(e);
+
+    const action = (e.dataset['action'] || '').trim();
+    if (action.length < 2)
+      throw new Error(`No action/url found on ${dom_id}`);
+
+    const full_action = page.full_url(action);
+    const method = (e.dataset['method'] || 'POST').toUpperCase();
+
+    http.fetch(dom_id, full_action, method as 'GET' | 'POST', data)
   }
 
 }; // export const
@@ -296,41 +323,7 @@ export const form = {
   submit(e: HTMLFormElement) {
     const form_id = dom.id.upsert(e);
 
-    css.reset(form_id, 'loading');
-
-    const action = e.getAttribute('action');
-    if (!action)
-      throw new Error(`action attribute not set for ${form_id}`);
-
-    const full_action = page.full_url( action );
-
-    const f_request: FetchRequestInit = {
-      method: "POST",
-      referrerPolicy: "no-referrer",
-      cache: "no-cache",
-      headers: {
-        "Content-Type": "application/json",
-        X_SENT_FROM: dom.id.upsert(e)
-      },
-      body: JSON.stringify(form.data(e))
-    };
-
-    const request: Request_Origin = {
-      request: f_request,
-      element_id: dom.id.upsert(e),
-      do_request: true
-    };
-
-    dispatch.request(request);
-
-    if (!request.do_request)
-      return false;
-
-    setTimeout(async () => {
-      return fetch(full_action, f_request)
-      .then((resp: Response) => dispatch.response(request, resp))
-      .catch((err: any) => dispatch.network_error(err, request));
-    }, 450);
+    http.fetch(form_id, e.getAttribute('action'), 'POST', form.data(e))
 
     return true;
   }, // === function
@@ -469,6 +462,48 @@ export const http = {
   retry_until_ok(seconds: number, selector: string | Element) {
     if (typeof selector === 'string')
       document.querySelectorAll(selector).forEach(e => KEEP_RETRYING_THESE[dom.id.upsert(e)] = seconds)
+  },
+
+  fetch(dom_id: string, raw_action: | null | string, method: 'POST' | 'GET', data?: { [index:string]: any}) {
+
+    const action = (raw_action || '').trim();
+
+    if (action.length < 2)
+      throw new Error(`action attribute not set for ${dom_id}`);
+
+    const fetch_data: FetchRequestInit = {
+      method,
+      referrerPolicy: "no-referrer",
+      cache: "no-cache",
+      headers: {
+        "Content-Type": "application/json",
+        X_SENT_FROM: dom_id
+      },
+      body: JSON.stringify(data || {})
+    };
+
+    const request: Request_Origin = {
+      request: fetch_data,
+      element_id: dom_id,
+      do_request: true
+    };
+
+    dispatch.request(request);
+
+    if (!request.do_request)
+      return false;
+
+    const full_action = page.full_url(action);
+
+    css.reset(dom_id, 'loading');
+
+    setTimeout(async () => {
+      fetch(full_action, fetch_data)
+      .then((resp: Response) => dispatch.response(request, resp))
+      .catch((err: any) => dispatch.network_error(err, request));
+    }, 450);
+
+    return true;
   }
 }; // export const
 
