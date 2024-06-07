@@ -18,7 +18,7 @@ export interface Network_Error_Origin {
 
 export interface Request_Origin {
   readonly request: FetchRequestInit,
-  readonly element_id: string,
+  readonly dom_id: string,
   do_request: boolean
 }
 
@@ -375,7 +375,7 @@ export const dispatch = {
 
   request(req: Request_Origin) {
     THE_BODY.dispatchEvent(new CustomEvent(`* request`, {detail: req}));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.element_id} request`, {detail: req}));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} request`, {detail: req}));
   },
 
   async response(req: Request_Origin, raw_resp: Response) {
@@ -384,51 +384,55 @@ export const dispatch = {
 
     const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
 
-    if (!resp['X_SENT_FROM']) {
+    const x_sent_from = resp['X_SENT_FROM'];
+
+    if (!x_sent_from) {
       warn(`X_SENT_FROM key not found in response: ${Object.keys(resp).join(', ')}`);
       return resp;
     }
 
-    const form_id = req.element_id;
-    const form = document.getElementById(form_id);
+    if(x_sent_from !== req.dom_id) {
+      warn(`X_SENT_FROM and dom id origin do not match: ${x_sent_from} !== ${req.dom_id}`);
+      return resp;
+    }
+
+    const e = document.getElementById(req.dom_id);
 
     const detail = {detail: {response: resp, request: req}};
 
     THE_BODY.dispatchEvent(new CustomEvent('* response', detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${form_id} response`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} response`, detail));
 
-    if (form) {
-      css.reset(form_id);
-    }
+    if (e)
+      css.reset(req.dom_id);
 
-    if (resp.status === 'ok') {
+    if (resp.status === 'ok')
       return dispatch.ok(resp, req);
-    }
 
-    dispatch.invalid(resp, req);
+    return dispatch.invalid(resp, req);
   },
 
   ok(resp: Response_Origin, req: Request_Origin) {
     const detail = {detail: {response: resp, request: req}};
-    css.set(`#${req.element_id}`, 'ok');
+    css.set(`#${req.dom_id}`, 'ok');
     THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${req.element_id} ok`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} ok`, detail));
   },
 
   invalid(resp: Response_Origin, req: Request_Origin) {
     const detail = {detail: {response: resp, request: req}};
-    css.set(req.element_id, 'invalid');
-    const e_form = document.getElementById(req.element_id);
+    css.set(req.dom_id, 'invalid');
+    const e_form = document.getElementById(req.dom_id);
     if (e_form)
       form.invalid_fields(e_form as HTMLFormElement, resp.fields);
     THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${req.element_id} invalid`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} invalid`, detail));
   },
 
   server_error(req: Request_Origin, raw_resp: Response) {
     warn(`!!! Server Error: ${raw_resp.status} - ${raw_resp.statusText}`);
 
-    const e = e_id(req.element_id);
+    const e = e_id(req.dom_id);
     if (e) {
       css.reset(e.id, 'server_error')
       const detail = {detail: {request: req, response: raw_resp}};
@@ -444,9 +448,9 @@ export const dispatch = {
     warn(`!!! Network error: ${error.message}`);
     const detail = {detail: {error, request}};
     THE_BODY.dispatchEvent(new CustomEvent('* network_error', detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${request.element_id} network_error`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${request.dom_id} network_error`, detail));
 
-    const e = e_id(request.element_id);
+    const e = e_id(request.dom_id);
     if (e) {
       css.reset(e.id, 'network_error')
       return true;
@@ -484,7 +488,7 @@ export const http = {
 
     const request: Request_Origin = {
       request: fetch_data,
-      element_id: dom_id,
+      dom_id: dom_id,
       do_request: true
     };
 
@@ -512,7 +516,7 @@ export const on = {
     THE_BODY.addEventListener('request', function (ev: Event) {
       const cev = ev as Custom_Event_Detail<Request_Origin>;
       const req = cev.detail;
-      if (selector === '*' || selector === req.element_id)
+      if (selector === '*' || selector === req.dom_id)
         f(req);
     });
   },
@@ -522,7 +526,7 @@ export const on = {
       const cev = ev as Custom_Event_Detail<Response_Detail>
       const resp = cev.detail.response;
       const req = cev.detail.request;
-      if (selector == '*' || selector === req.element_id)
+      if (selector == '*' || selector === req.dom_id)
         f(resp, req);
     });
   },
