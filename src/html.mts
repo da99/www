@@ -460,14 +460,7 @@ export const dispatch = {
   } // === function
 }; // export dispatch
 
-const KEEP_RETRYING_THESE: { [index:string]: number } = {};
-
 export const http = {
-  retry_until_ok(seconds: number, selector: string | Element) {
-    if (typeof selector === 'string')
-      document.querySelectorAll(selector).forEach(e => KEEP_RETRYING_THESE[dom.id.upsert(e)] = seconds)
-  },
-
   fetch(dom_id: string, raw_action: | null | string, method: 'POST' | 'GET', data?: { [index:string]: any}) {
 
     const action = (raw_action || '').trim();
