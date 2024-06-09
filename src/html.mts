@@ -189,6 +189,16 @@ export const dom = {
     }
   },
 
+  update_text_by_id(data: { [index: string]: string | number }) {
+    for (const k in data) {
+      const e = document.getElementById(k) || document.getElementById(`${k}_value`)
+      if (e)
+        e.textContent = data[k].toLocaleString();
+      else
+        warn(`Element not found: ${k}/${k}_value`);
+    }
+  },
+
   to_element(x: string | HTMLElement) {
     if (typeof x === 'string') {
       const ele = document.getElementById(x);
@@ -264,9 +274,11 @@ export const css = {
 
 }; // export const
 
-export function use_default_forms() {
-  return THE_BODY.addEventListener('click', form.on_click_submit);
-} // export function
+export const use = {
+  default_forms() {
+    return THE_BODY.addEventListener('click', form.on_click_submit);
+  } // export function
+};
 
 export const form = {
 
