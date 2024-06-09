@@ -307,7 +307,6 @@ export const form = {
   }, // export function
 
   on_click_submit(ev: MouseEvent) {
-    log(`Event type: ${ev.type}`);
     const ele =  ev.target && (ev.target as Element).tagName && (ev.target as Element);
 
     if (!ele)
@@ -386,8 +385,8 @@ export const page = {
 export const dispatch = {
 
   request(req: Request_Origin) {
-    THE_BODY.dispatchEvent(new CustomEvent(`* request`, {detail: req}));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} request`, {detail: req}));
+    THE_BODY.dispatchEvent(new CustomEvent('* request', {detail: req}));
+    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} request`, {detail: req}));
   },
 
   async response(req: Request_Origin, raw_resp: Response) {
@@ -517,12 +516,12 @@ export const http = {
 }; // export const
 
 export const on = {
-  request(selector: string, f: (req: Request_Origin) => void) {
-    THE_BODY.addEventListener('request', function (ev: Event) {
+  request(raw_selector: string, f: (req: Request_Origin) => void) {
+    const selector = (raw_selector === '*') ? '*' : `#${raw_selector}`;
+    THE_BODY.addEventListener(`${selector} request`, function (ev: Event) {
       const cev = ev as Custom_Event_Detail<Request_Origin>;
       const req = cev.detail;
-      if (selector === '*' || selector === req.dom_id)
-        f(req);
+      f(req);
     });
   },
 

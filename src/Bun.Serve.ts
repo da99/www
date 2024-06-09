@@ -12,16 +12,6 @@ const WATCH_DIRS = ['public', 'src']
 
 console.log(`Starting server at: ${THE_PORT}, DIR: ${STATIC_DIR}, CMD: ${BUILD_CMD}, WATCH Dirs: ${WATCH_DIRS.join(', ')}`)
 
-// const MOD_MAN_CMD = `www modified manifest for ${WATCH_DIRS.join(' ')}`
-const MOD_MAN_CMD = `www modified manifest for public`
-
-async function mod_man() {
-  console.log(`--- Running: ${MOD_MAN_CMD}`)
-  return $`sh -c ${MOD_MAN_CMD}`.text();
-}
-
-let OLD_MOD_MAN = '';
-
 function is_html(x: string) {
   return x.indexOf('.html') > 0;
 }
@@ -35,13 +25,11 @@ Bun.serve({
     if (!exists)
       return new Response(`Not found: ${u.pathname}`, { status: 404 });
 
+    // if this a .html request,
+    //   re-build static files:
     if (is_html(u.pathname)) {
-      const new_mod_man = await mod_man();
-      if (new_mod_man != OLD_MOD_MAN) {
-        console.log(`-- Running: ${BUILD_CMD}`)
-        console.log(await $`sh -c ${BUILD_CMD}`.text());
-        OLD_MOD_MAN = new_mod_man;
-      }
+      console.log(`-- Running: ${BUILD_CMD}`)
+      console.log(await $`sh -c ${BUILD_CMD}`.text());
     }
 
     const r = new Response(await f.arrayBuffer(), {
