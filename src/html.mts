@@ -230,46 +230,55 @@ export const dom = {
 
 
 export const css = {
-  do(f: (e: Element) => void, ...args: Array<string | Element>) {
-    for (const x of args) {
-      if (typeof x === 'string')
+  by_selector: {
+    do(f: (e: Element) => void, ...selectors: Array<string>) {
+      for (const x of selectors)
         document.querySelectorAll(x).forEach(f)
-      else
-        f(x);
+      return selectors;
+    },
+
+    hide(...args: Array<string>) { css.by_selector.do(css.by_element.hide, ...args); },
+    unhide(...args: Array<string>) { css.by_selector.do(css.by_element.unhide, ...args); },
+
+    reset_to(new_class: typeof CSS_States[number], ...selectors: Array<string>) {
+      css.by_selector.reset(...selectors);
+      css.by_selector.do((e) => e.classList.add(new_class), ...selectors);
+    },
+
+    reset(...selectors: Array<string>) {
+      css.by_selector.do(css.by_element.reset, ...selectors);
     }
-    return args;
   },
 
-  hide(...args: Array<Element | string>) {
-    return css.do(e => e.classList.add('hide'), ...args);
-  },
-
-  unhide(...args: Array<Element | string>) {
-    return css.do(e => e.classList.remove('hide'), ...args);
-  },
-
-  reset(e_id: string, new_class?: typeof CSS_States[number]) {
-    const e = document.querySelector(`#${e_id}`);
-
-    if (e) {
-      for (const s of CSS_States) {
-        e.classList.remove(s);
+  by_id: {
+    do(f: (e: Element) => void, ...ids: Array<string>) {
+      for (const x of ids) {
+        const e = document.getElementById(x);
+        if (e)
+          f(e);
       }
-
-      if (new_class)
-        css.set(e_id, new_class);
+      return ids;
+    },
+    hide(...ids: Array<string>) { css.by_id.do(css.by_element.hide, ...ids); },
+    unhide(...ids: Array<string>) { css.by_id.do(css.by_element.unhide, ...ids); },
+    reset(...ids: Array<string>) { css.by_id.do(css.by_element.reset, ...ids); },
+    reset_to(new_class: typeof CSS_States[number], ...ids: Array<string>) {
+      css.by_id.reset(...ids);
+      css.by_id.do((e) => e.classList.add(new_class), ...ids);
     }
-
-    return e;
   },
 
-  set(e_id: string, new_class: typeof CSS_States[number]) {
-    THE_BODY.classList.add(`${e_id}-${new_class}`);
-    const e = document.querySelector(`#${e_id}`);
-    if (e)
+  by_element: {
+    hide(e: Element) { e.classList.add('hide'); },
+    unhide(e: Element) { e.classList.remove('hide'); },
+    reset(e: Element) {
+      for (const s of CSS_States)
+        e.classList.remove(s);
+    },
+    reset_to(new_class: typeof CSS_States[number], e: Element) {
+      css.by_element.reset(e);
       e.classList.add(new_class);
-
-    return THE_BODY;
+    }
   }
 
 }; // export const
@@ -386,7 +395,7 @@ export const dispatch = {
 
   request(req: Request_Origin) {
     THE_BODY.dispatchEvent(new CustomEvent('* request', {detail: req}));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} request`, {detail: req}));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} request`, {detail: req}));
   },
 
   async response(req: Request_Origin, raw_resp: Response) {
@@ -412,10 +421,10 @@ export const dispatch = {
     const detail = {detail: {response: resp, request: req}};
 
     THE_BODY.dispatchEvent(new CustomEvent('* response', detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} response`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} response`, detail));
 
     if (e)
-      css.reset(req.dom_id);
+      css.by_id.reset(req.dom_id);
 
     if (resp.status === 'ok')
       return dispatch.ok(resp, req);
@@ -425,30 +434,30 @@ export const dispatch = {
 
   ok(resp: Response_Origin, req: Request_Origin) {
     const detail = {detail: {response: resp, request: req}};
-    css.set(`#${req.dom_id}`, 'ok');
+    css.by_id.reset_to('ok', req.dom_id);
     THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} ok`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} ok`, detail));
   },
 
   invalid(resp: Response_Origin, req: Request_Origin) {
     const detail = {detail: {response: resp, request: req}};
-    css.set(req.dom_id, 'invalid');
+    css.by_id.reset_to('invalid', req.dom_id);
     const e_form = document.getElementById(req.dom_id);
     if (e_form)
       form.invalid_fields(e_form as HTMLFormElement, resp.fields);
     THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${req.dom_id} invalid`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} invalid`, detail));
   },
 
   server_error(req: Request_Origin, raw_resp: Response) {
     warn(`!!! Server Error: ${raw_resp.status} - ${raw_resp.statusText}`);
 
-    const e = e_id(req.dom_id);
+    const e = document.getElementById(req.dom_id);
     if (e) {
-      css.reset(e.id, 'server_error')
+      css.by_element.reset_to('server_error', e);
       const detail = {detail: {request: req, response: raw_resp}};
       THE_BODY.dispatchEvent(new CustomEvent('* server_error', detail));
-      THE_BODY.dispatchEvent(new CustomEvent(`#${e.id} server_error`, detail));
+      THE_BODY.dispatchEvent(new CustomEvent(`${e.id} server_error`, detail));
       return true;
     }
     return false;
@@ -459,11 +468,11 @@ export const dispatch = {
     warn(`!!! Network error: ${error.message}`);
     const detail = {detail: {error, request}};
     THE_BODY.dispatchEvent(new CustomEvent('* network_error', detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`#${request.dom_id} network_error`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`${request.dom_id} network_error`, detail));
 
-    const e = e_id(request.dom_id);
+    const e = document.getElementById(request.dom_id);
     if (e) {
-      css.reset(e.id, 'network_error')
+      css.by_element.reset_to('network_error', e);
       return true;
     }
 
@@ -503,7 +512,7 @@ export const http = {
 
     const full_action = page.full_url(action);
 
-    css.reset(dom_id, 'loading');
+    css.by_id.reset_to('loading', dom_id);
 
     setTimeout(async () => {
       fetch(full_action, fetch_data)
@@ -516,8 +525,7 @@ export const http = {
 }; // export const
 
 export const on = {
-  request(raw_selector: string, f: (req: Request_Origin) => void) {
-    const selector = (raw_selector === '*') ? '*' : `#${raw_selector}`;
+  request(selector: string, f: (req: Request_Origin) => void) {
     THE_BODY.addEventListener(`${selector} request`, function (ev: Event) {
       const cev = ev as Custom_Event_Detail<Request_Origin>;
       const req = cev.detail;
@@ -526,12 +534,11 @@ export const on = {
   },
 
   response(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
-    THE_BODY.addEventListener('response', function (ev: Event) {
+    THE_BODY.addEventListener(`${selector} response`, function (ev: Event) {
       const cev = ev as Custom_Event_Detail<Response_Detail>
       const resp = cev.detail.response;
       const req = cev.detail.request;
-      if (selector == '*' || selector === req.dom_id)
-        f(resp, req);
+      f(resp, req);
     });
   },
 
@@ -564,9 +571,3 @@ export const on = {
   }
 }; // export on
 
-// function default_request_handle(ev: Event) {
-//   const cev = ev as Custom_Event_Detail<Request_Origin>;
-// }
-export function e_id(s: string) {
-  return document.getElementById(s);
-}
