@@ -231,40 +231,37 @@ export const dom = {
 
 export const css = {
   by_selector: {
-    do(f: (e: Element) => void, ...selectors: Array<string>) {
-      for (const x of selectors)
-        document.querySelectorAll(x).forEach(f)
-      return selectors;
+    do(f: (e: Element) => void, selector: string) {
+      document.querySelectorAll(selector).forEach(f)
+      return selector;
     },
 
-    hide(...args: Array<string>) { css.by_selector.do(css.by_element.hide, ...args); },
-    unhide(...args: Array<string>) { css.by_selector.do(css.by_element.unhide, ...args); },
+    hide(s: string) { css.by_selector.do(css.by_element.hide, s); },
+    unhide(s: string) { css.by_selector.do(css.by_element.unhide, s); },
 
-    reset_to(new_class: typeof CSS_States[number], ...selectors: Array<string>) {
-      css.by_selector.reset(...selectors);
-      css.by_selector.do((e) => e.classList.add(new_class), ...selectors);
+    reset_to(new_class: typeof CSS_States[number], selector: string) {
+      css.by_selector.reset(selector);
+      css.by_selector.do((e) => e.classList.add(new_class), selector);
     },
 
-    reset(...selectors: Array<string>) {
-      css.by_selector.do(css.by_element.reset, ...selectors);
+    reset(selector: string) {
+      css.by_selector.do(css.by_element.reset, selector);
     }
   },
 
   by_id: {
-    do(f: (e: Element) => void, ...ids: Array<string>) {
-      for (const x of ids) {
-        const e = document.getElementById(x);
-        if (e)
-          f(e);
-      }
-      return ids;
+    do(f: (e: Element) => void, id: string) {
+      const e = document.getElementById(id);
+      if (e)
+        f(e);
+      return id;
     },
-    hide(...ids: Array<string>) { css.by_id.do(css.by_element.hide, ...ids); },
-    unhide(...ids: Array<string>) { css.by_id.do(css.by_element.unhide, ...ids); },
-    reset(...ids: Array<string>) { css.by_id.do(css.by_element.reset, ...ids); },
-    reset_to(new_class: typeof CSS_States[number], ...ids: Array<string>) {
-      css.by_id.reset(...ids);
-      css.by_id.do((e) => e.classList.add(new_class), ...ids);
+    hide(id: string) { css.by_id.do(css.by_element.hide, id); },
+    unhide(id: string) { css.by_id.do(css.by_element.unhide, id); },
+    reset(id: string) { css.by_id.do(css.by_element.reset, id); },
+    reset_to(new_class: typeof CSS_States[number], id: string) {
+      css.by_id.reset(id);
+      css.by_id.do((e) => e.classList.add(new_class), id);
     }
   },
 
