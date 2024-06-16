@@ -3,6 +3,8 @@ export const Response_States = ['ok', 'invalid', 'try_again', 'expired'] as cons
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
 export const CSS_States = [...Response_States, ...Event_States] as const;
 
+export type Response_Handler = (resp: Response_Origin, req: Request_Origin) => void;
+
 export interface Fields_State {
   [index: string]: string
 }
@@ -423,27 +425,15 @@ export const dispatch = {
     if (e)
       css.by_id.reset(req.dom_id);
 
-    if (resp.status === 'ok')
-      return dispatch.ok(resp, req);
-
-    return dispatch.invalid(resp, req);
+    return dispatch.status(resp, req);
   },
 
-  ok(resp: Response_Origin, req: Request_Origin) {
+  status(resp: Response_Origin, req: Request_Origin) {
+    const status = resp.status;
     const detail = {detail: {response: resp, request: req}};
-    css.by_id.reset_to('ok', req.dom_id);
-    THE_BODY.dispatchEvent(new CustomEvent(`* ok`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} ok`, detail));
-  },
-
-  invalid(resp: Response_Origin, req: Request_Origin) {
-    const detail = {detail: {response: resp, request: req}};
-    css.by_id.reset_to('invalid', req.dom_id);
-    const e_form = document.getElementById(req.dom_id);
-    if (e_form)
-      form.invalid_fields(e_form as HTMLFormElement, resp.fields);
-    THE_BODY.dispatchEvent(new CustomEvent(`* invalid`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} invalid`, detail));
+    css.by_id.reset_to(status, req.dom_id);
+    THE_BODY.dispatchEvent(new CustomEvent(`* ${status}`, detail));
+    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} ${status}`, detail));
   },
 
   server_error(req: Request_Origin, raw_resp: Response) {
@@ -530,7 +520,21 @@ export const on = {
     });
   },
 
-  response(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
+  network_error(selector: string, f: (req: Request_Origin, err: any) => void) {
+    THE_BODY.addEventListener(`${selector} network_error`, (ev: Event) => {
+      const cev = ev as Custom_Event_Detail<Network_Error_Origin>;
+      f(cev.detail.error, cev.detail.request);
+    });
+  },
+
+  server_error(selector: string, f: Response_Handler) {
+    THE_BODY.addEventListener(`${selector} server_error`, (ev: Event) => {
+      const cev = ev as Custom_Event_Detail<Response_Detail>;
+      f(cev.detail.response, cev.detail.request);
+    });
+  },
+
+  response(selector: string, f: Response_Handler) {
     THE_BODY.addEventListener(`${selector} response`, function (ev: Event) {
       const cev = ev as Custom_Event_Detail<Response_Detail>
       const resp = cev.detail.response;
@@ -539,32 +543,17 @@ export const on = {
     });
   },
 
-  network_error(selector: string, f: (req: Request_Origin, err: any) => void) {
-    THE_BODY.addEventListener(`${selector} network_error`, (ev: Event) => {
-      const cev = ev as Custom_Event_Detail<Network_Error_Origin>;
-      f(cev.detail.error, cev.detail.request);
-    })
-  },
+  ok(selector: string, f: Response_Handler) { return on.status('ok', selector, f); },
+  invalid(selector: string, f: Response_Handler) { return on.status('invalid', selector, f); },
+  try_again(selector: string, f: Response_Handler) { return on.status('try_again', selector, f); },
+  expired(selector: string, f: Response_Handler) { return on.status('expired', selector, f); },
 
-  server_error(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
-    THE_BODY.addEventListener(`${selector} server_error`, (ev: Event) => {
-      const cev = ev as Custom_Event_Detail<Response_Detail>;
-      f(cev.detail.response, cev.detail.request);
-    });
-  },
-
-  ok(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
-    THE_BODY.addEventListener(`${selector} ok`, (ev: Event) => {
-      const cev = ev as Custom_Event_Detail<Response_Detail>;
-      f(cev.detail.response, cev.detail.request);
-    });
-  },
-
-  invalid(selector: string, f: (resp: Response_Origin, req: Request_Origin) => void) {
-    THE_BODY.addEventListener(`${selector} invalid`, (ev: Event) => {
+  status(s: typeof CSS_States[number], selector: string, f: Response_Handler) {
+    return THE_BODY.addEventListener(`${selector} ${s}`, (ev: Event) => {
       const cev = ev as Custom_Event_Detail<Response_Detail>;
       f(cev.detail.response, cev.detail.request);
     });
   }
+
 }; // export on
 
