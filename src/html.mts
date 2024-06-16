@@ -377,6 +377,10 @@ export const page = {
     return url.toString();
   },
 
+  go_to(raw: string) {
+    window.location.href = page.full_url(raw);
+  },
+
   reload(seconds?: number) {
     if (typeof seconds !== 'number')
       return window.location.reload();
@@ -553,6 +557,19 @@ export const on = {
       const cev = ev as Custom_Event_Detail<Response_Detail>;
       f(cev.detail.response, cev.detail.request);
     });
+  },
+
+  by_id: {
+    click(id: string, f: (ev: Event) => void) {
+      THE_BODY.addEventListener('click', function (ev: Event) {
+        const target = ev.target;
+        if (target) {
+          const e = target as Element;
+          if (e.id === id)
+            f(ev);
+        }
+      });
+    }
   }
 
 }; // export on
