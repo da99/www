@@ -25,9 +25,8 @@ export interface Request_Origin {
 }
 
 export interface Response_Origin {
-  readonly X_SENT_FROM: string,
   readonly status: typeof Response_States[number],
-  readonly fields: {
+  readonly data: {
     [index: string]: string
   }
 }
@@ -191,9 +190,9 @@ export const dom = {
     }
   },
 
-  update_values(data: { [index: string]: string | number }) {
+  update_values(dom_id: string, data: { [index: string]: string | number }) {
     for (const k in data) {
-      document.querySelectorAll(`.${k}_value`).forEach((e) => e.textContent = data[k].toLocaleString() )
+      document.querySelectorAll(`#${dom_id} .${k}_value`).forEach((e) => e.textContent = data[k].toLocaleString() )
     }
   },
 
@@ -403,10 +402,10 @@ export const dispatch = {
 
     const resp: Response_Origin = (await raw_resp.json()) as Response_Origin;
 
-    const x_sent_from = resp['X_SENT_FROM'];
+    const x_sent_from = raw_resp.headers.get('X_SENT_FROM');
 
     if (!x_sent_from) {
-      warn(`X_SENT_FROM key not found in response: ${Object.keys(resp).join(', ')}`);
+      warn(`X_SENT_FROM key not found in headers: ${Array.from(raw_resp.headers.keys()).join(', ')}`);
       return resp;
     }
 
