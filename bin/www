@@ -74,7 +74,7 @@ case "$*" in
           mv "$LINE".tmp "$LINE"
           ;;
       esac
-    done < <( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.css')
+    done < <( find section -maxdepth 2 -mindepth 2 -type f -iname '*.css')
     ;;
 
   'build html')
@@ -84,18 +84,18 @@ case "$*" in
       echo "--- Processing html: $new_file"
       bun run "$LINE" > "$new_file"
       rm "$LINE"
-    done < <( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.html.mts')
+    done < <( find section -maxdepth 2 -mindepth 2 -type f -iname '*.html.mts')
     ;;
 
   'build mjs')
     ensure_build_dir;
     # "$THIS_DIR"/src/PublicFile.rb build mjs
     set -x
-    index_mts=$( find public/section -maxdepth 2 -mindepth 2 -type f -iname '*.mts' -and -not -iname '*.html.mts')
+    index_mts=$( find section -maxdepth 2 -mindepth 2 -type f -iname '*.mts' -and -not -iname '*.html.mts')
     # index_mts=$( echo public/section/**/*.html.mts )
     bun build \
       --target browser \
-      --outdir "$PWD"/public/section \
+      --outdir "$PWD"/section \
       --splitting \
       --chunk-naming "[dir]/lib.[name].[hash].mjs" \
       --entry-naming "[dir]/[name].mjs" \

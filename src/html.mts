@@ -191,13 +191,9 @@ export const dom = {
     }
   },
 
-  update_text_by_id(data: { [index: string]: string | number }) {
+  update_values(data: { [index: string]: string | number }) {
     for (const k in data) {
-      const e = document.getElementById(k) || document.getElementById(`${k}_value`)
-      if (e)
-        e.textContent = data[k].toLocaleString();
-      else
-        warn(`Element not found: ${k}/${k}_value`);
+      document.querySelectorAll(`.${k}_value`).forEach((e) => e.textContent = data[k].toLocaleString() )
     }
   },
 

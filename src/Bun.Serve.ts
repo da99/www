@@ -6,7 +6,7 @@ import { normalize, join } from "node:path";
 const SETTINGS = await Bun.file('settings.json').json()
 
 const THE_PORT = parseInt(SETTINGS['STATIC_PORT'] || '4568')
-const STATIC_DIR = normalize(`./${join(SETTINGS['BUILD_DIR'], SETTINGS['STATIC_DIR'])}`)
+const STATIC_DIR = normalize(`./${join(SETTINGS['BUILD_DIR'])}`)
 const BUILD_CMD = SETTINGS['BUILD_CMD_DEV'] || SETTINGS['BUILD_CMD']
 const WATCH_DIRS = ['public', 'src']
 
