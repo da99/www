@@ -1,5 +1,5 @@
 
-export const Response_States = ['ok', 'invalid', 'try_again', 'expired'] as const;
+export const Response_States = ['ok', 'invalid', 'try_again', 'not_yet', 'expired'] as const;
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
 export const CSS_States = [...Response_States, ...Event_States] as const;
 
@@ -545,6 +545,7 @@ export const on = {
   ok(selector: string, f: Response_Handler) { return on.status('ok', selector, f); },
   invalid(selector: string, f: Response_Handler) { return on.status('invalid', selector, f); },
   try_again(selector: string, f: Response_Handler) { return on.status('try_again', selector, f); },
+  not_yet(selector: string, f: Response_Handler) { return on.status('not_yet', selector, f); },
   expired(selector: string, f: Response_Handler) { return on.status('expired', selector, f); },
 
   status(s: typeof CSS_States[number], selector: string, f: Response_Handler) {
