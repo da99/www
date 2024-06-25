@@ -44,14 +44,10 @@ const DB_FILE = 'public_files.sqlite';
 class DB {
   static FILE = 'public_files.sqlite';
   static BUCKET_PATH = path.join(THE_SITE_SETTINGS.bucket_name, THE_SITE_SETTINGS.static_dir)
-  static base_sql = '/apps/da.sh/templates/public_file.sql';
+  static base_sql = '/apps/www/sql/public_file.sql';
 
   static async is_file_exists() {
     return Bun.file(DB.FILE).exists();
-  }
-
-  static async site_settings() {
-    return 
   }
 
   db: Database;
@@ -63,7 +59,7 @@ class DB {
 
   async setup() {
     const raw_meta_sql = await Bun.file(DB.base_sql).text();
-    const meta_sql = raw_meta_sql.split(/--\ +SPLIT\ +--/);
+    const meta_sql = raw_meta_sql.split(/-+\ +SPLIT\ +-+/);
     for (const q of meta_sql) {
       console.warn(`-- Running: ${q.slice(0,15).trim()}...`)
       console.warn(this.db.query(q).all());
