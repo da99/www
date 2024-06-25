@@ -11,6 +11,13 @@ end
 # Represents a file in the public directory.
 class PublicFile
   class << self
+    def add_etag_to_file_name(etag, path)
+      pieces = path.split('/')
+      last = pieces.pop
+      pieces.push("#{etag[0..ETAG_SIZE]}.#{last}")
+      pieces.join('/')
+    end
+
     def all(raw_dir)
       dir = normalize_dir(raw_dir)
       PublicFile.dir_exist!(dir)
@@ -83,11 +90,7 @@ class PublicFile
     @path = raw.sub(@dir, '')
     @etag = `sha256sum "#{raw}"`.split.first
     @created_at = `stat -c "%W" "#{raw}"`.strip
-    @public_path = begin
-      pieces = path.split('.')
-      pieces[pieces.size - 1] = "#{etag[0..ETAG_SIZE]}.#{pieces.last}"
-      pieces.join('.').sub(@dir, '')
-    end
+    @public_path = PublicFile.add_etag_to_file_name(etag, path)
   end
   # --- def
 
