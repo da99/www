@@ -19,14 +19,12 @@ type FILE_MANIFEST = {
 }
 
 type SITE_SETTINGS = {
-  static_dir: string,
-  bucket_name: string,
-  public_files: { [index: string]: JSON_FILE },
+  BUILD_DIR: string,
+  BUCKET_NAME: string
 }
 
 const THE_SITE_SETTINGS = await (Bun.file('settings.json').json() as Promise<SITE_SETTINGS>);
 const PUBLIC_FILES = await (Bun.file('public_files.json').json() as Promise<FILE_MANIFEST>)
-
 
 type FILE_ROW = {
   local_path: string,
@@ -43,7 +41,7 @@ const DB_FILE = 'public_files.sqlite';
 // ==========================================================================
 class DB {
   static FILE = 'public_files.sqlite';
-  static BUCKET_PATH = path.join(THE_SITE_SETTINGS.bucket_name, THE_SITE_SETTINGS.static_dir)
+  static BUCKET_PATH = path.join(THE_SITE_SETTINGS.BUCKET_NAME, THE_SITE_SETTINGS.BUILD_DIR)
   static base_sql = '/apps/www/sql/public_file.sql';
 
   static async is_file_exists() {
@@ -151,7 +149,7 @@ class DB {
   async upload_file(f: JSON_FILE) {
     const this_db = this;
     const bucket_path = path.join(DB.BUCKET_PATH, f.public_path)
-    const local_path  = path.join(THE_SITE_SETTINGS.static_dir, f.local_path);
+    const local_path  = path.join(THE_SITE_SETTINGS.BUILD_DIR, f.local_path);
     const prom = $`bun x wrangler r2 object put "${bucket_path}" --file="${local_path}"`;
     return prom.then(async function (x) {
       if (x.exitCode !== 0) {
