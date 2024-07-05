@@ -137,7 +137,7 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
 //   )
 // )
 export function html5(...eles: BChild[]) {
-    return `<!DOCTYPE html>\n${eles.map(e => to_html(e)).join('')}`;
+    return `<!DOCTYPE html><html lang="en">\n${eles.map(e => to_html(e)).join('')}</html>`;
 } // func
 
 export function to_html(x: BChild) {
