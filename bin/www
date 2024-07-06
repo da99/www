@@ -81,10 +81,17 @@ case "$*" in
     ensure_build_dir;
     while read -r LINE ; do
       new_file=${LINE/.html.mts/.html}
-      echo "--- Processing html: $new_file"
+      echo "--- Processing .html: $LINE"
       bun run "$LINE" > "$new_file"
       rm "$LINE"
     done < <( find section -maxdepth 2 -mindepth 2 -type f -iname '*.html.mts')
+
+    while read -r LINE ; do
+      new_file=${LINE/.html.rb/.html}
+      echo "--- Processing .html: $LINE"
+      ruby "$LINE" > "$new_file"
+      rm "$LINE"
+    done < <( find section -maxdepth 2 -mindepth 2 -type f -iname '*.html.rb')
     ;;
 
   'build mjs')
