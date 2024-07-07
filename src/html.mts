@@ -190,12 +190,6 @@ export const dom = {
     }
   },
 
-  update_values(dom_id: string, data: { [index: string]: string | number }) {
-    for (const k in data) {
-      document.querySelectorAll(`#${dom_id} .${k}_value`).forEach((e) => e.textContent = data[k].toLocaleString() )
-    }
-  },
-
   to_element(x: string | HTMLElement) {
     if (typeof x === 'string') {
       const ele = document.getElementById(x);
@@ -221,10 +215,90 @@ export const dom = {
     const method = (e.dataset['method'] || 'POST').toUpperCase();
 
     http.fetch(dom_id, full_action, method as 'GET' | 'POST', data)
-  }
+  },
 
-}; // export const
+}; // export dom
 
+
+export const template = {
+  MATCH: /^\{([a-zA-Z0-9\.\-\_]+)\}$/ ,
+
+  update: {
+    _dataset_key(e: HTMLElement, data: { [index: string]: string | number }) {
+      const key = e.dataset['key'];
+      if (!key)
+        return false;
+      e.textContent = data[key].toLocaleString();
+      return e;
+    },
+
+    by_keys(dom_id: string, data: { [index: string]: string | number }) {
+      return document.querySelectorAll(`#${dom_id} [data-key]`).forEach(x => template.update._dataset_key(x as HTMLElement, data));
+    },
+  },
+
+  compile(df : HTMLTemplateElement, values: { [key: string]: any}) {
+    const doc = df.content.cloneNode(true);
+    const nodes = document.createNodeIterator(doc, NodeFilter.SHOW_ELEMENT);
+
+    let n;
+    while (n = nodes.nextNode()) {
+      const e = n as HTMLElement;
+      if (e.hasAttributes()) {
+        for (const a of e.attributes) {
+          const m = a.value.match(template.MATCH);
+          if (!m)
+            continue;
+          a.value = values[m[1]].toLocaleString();
+        }
+      }
+
+      if (e.childNodes.length == 1 && e.childNodes[0].nodeType === Node.TEXT_NODE) {
+        const match = e.innerHTML.match(template.MATCH)
+        if (!match)
+          continue;
+        const val = values[match[1]];
+        if (!val)
+          continue;
+        e.textContent = val.toLocaleString();
+      }
+
+      const e_parent = e.parentNode;
+      if (e.tagName.toUpperCase() === 'TEMPLATE') {
+        const e_id = e.dataset['id'];
+        const target = ((e_id) ? (document.getElementById(e_id) || e) : e) as HTMLTemplateElement;
+        const loop = e.dataset['loop'];
+        if (loop) {
+          const vals = values[loop];
+
+          if (!vals)
+            continue;
+          for (const x of vals) {
+            const sub_tmpl = template.compile(target, x);
+            if (sub_tmpl && e_parent) {
+              e_parent.insertBefore(sub_tmpl, e);
+            }
+          }
+        } // if loop
+
+          const key = e.dataset['key'];
+          if (key) {
+            const val = values[key];
+            if (!val)
+              continue;
+
+            const sub_tmpl = template.compile(target, val);
+            if (sub_tmpl && e_parent) {
+              e_parent.insertBefore(sub_tmpl, e);
+            }
+          }
+
+          e.remove();
+      } // if TEMPLATE
+    } // while
+      return doc;
+  } // compile
+}; // const template
 
 export const css = {
   by_selector: {
