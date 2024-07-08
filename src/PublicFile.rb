@@ -61,6 +61,7 @@ class PublicFile
           'local_path' => new_file.path,
           'public_path' => new_file.public_path,
           'etag' => new_file.etag[0..ETAG_SIZE],
+          'md5' => new_file.md5,
           'created_at' => new_file.created_at,
           'mime_type' => `www mime '#{new_file.raw}'`.strip
         }
@@ -80,7 +81,7 @@ class PublicFile
   end
   # --- class << self
 
-  attr_reader :dir, :raw, :etag, :path, :created_at, :public_path
+  attr_reader :dir, :raw, :md5, :etag, :path, :created_at, :public_path
 
   ETAG_SIZE = 8
 
@@ -89,6 +90,7 @@ class PublicFile
     @raw = raw
     @path = raw.sub(@dir, '')
     @etag = `sha256sum "#{raw}"`.split.first
+    @md5 =`md5sum "#{raw}"`.split.first
     @created_at = `stat -c "%W" "#{raw}"`.strip
     @public_path = PublicFile.add_etag_to_file_name(etag, path)
   end
@@ -99,7 +101,8 @@ class PublicFile
       'path' => path,
       'dir' => dir,
       'public_path' => public_path,
-      'etag' => etag
+      'etag' => etag,
+      'md5' => md5
     )
   end
 end
