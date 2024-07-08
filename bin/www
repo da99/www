@@ -26,32 +26,27 @@ ensure_build_dir() {
 
 case "$*" in
   --help|help|-h)
-  cmd="$(basename "$0")"
-  echo "$cmd setup bucket"
-  echo "     Create the sqlite database to remember uploaded/pruned public files."
-  echo "$cmd update file manifest"
-  echo "     Writes public_files.json"
-  echo "$cmd update raw file manifest"
-  echo "     Writes tmp/raw_files.json"
-  echo "$cmd upload to bucket"
-  echo "$cmd prune files"
-  echo "$cmd build mjs|css|html"
-  echo "$cmd serve [PORT] [DIR] [CMD] - Run CMD and serve static file."
-  echo "$cmd list old|new files"
-  echo "$cmd mime [FILE]"
-  echo "$cmd modified manifest for [DIRs...]"
-  echo "     Prints a list of files and their modified times."
+    da doc "$0"
   ;;
 
-  "upload to bucket"|"setup bucket")
-    bun run "$THIS_DIR"/src/Public_File.mts "$@"
+  README) # doc
+    bat "$THIS_DIR/README.md"
   ;;
 
-  "update file manifest")
+  "public upload") # doc
+  ;;
+
+  "public prune") # doc
+  ;;
+
+  "public prune list") # doc
+  ;;
+
+  "update file manifest") # doc: - Writes public_files.json
     "$THIS_DIR"/src/PublicFile.rb "$@"
   ;;
 
-  "update raw file manifest")
+  "update raw file manifest") # doc: - Writes tmp/raw_files.json
     "$THIS_DIR"/src/PublicFile.rb "$@"
   ;;
 
@@ -59,7 +54,7 @@ case "$*" in
     "$THIS_DIR"/src/PublicFile.rb "$@"
     ;;
 
-  'build css')
+  'build css') # doc
     ensure_build_dir
     while read -r LINE ; do
       case "$LINE" in
@@ -77,7 +72,7 @@ case "$*" in
     done < <( find section -maxdepth 2 -mindepth 2 -type f -iname '*.css')
     ;;
 
-  'build html')
+  'build html') # doc
     ensure_build_dir;
     while read -r LINE ; do
       new_file=${LINE/.html.mts/.html}
@@ -94,7 +89,7 @@ case "$*" in
     done < <( find section -maxdepth 2 -mindepth 2 -type f -iname '*.html.rb')
     ;;
 
-  'build mjs')
+  'build mjs') # doc
     ensure_build_dir;
     # "$THIS_DIR"/src/PublicFile.rb build mjs
     set -x
@@ -106,11 +101,15 @@ case "$*" in
       --splitting \
       --chunk-naming "[dir]/lib.[name].[hash].mjs" \
       --entry-naming "[dir]/[name].mjs" \
-      $index_mts
-    rm $index_mts
+      "$index_mts"
+    rm "$index_mts"
   ;;
 
-  'list new files'|'list old files')
+  'list new files') # doc
+    bun run "$THIS_DIR"/src/Public_File.mts "$@"
+  ;;
+
+  'list old files') # doc
     bun run "$THIS_DIR"/src/Public_File.mts "$@"
   ;;
 
@@ -123,12 +122,12 @@ case "$*" in
     bun run "$THIS_DIR"/src/Public_File.mts "$@"
   ;;
 
-  'serve '*)
+  'serve '*) # doc+ [PORT] [DIR] [CMD] - Run CMD and serve static file.
     set -x
     bun run "$THIS_DIR"/src/Bun.Serve.ts "$@"
   ;;
 
-  'mime '*)
+  'mime '*) # doc+ [FILE]
     results="$(bun --eval "console.log(Bun.file('$2').type)")"
     case "$results" in
       "application/octet-stream")
@@ -140,7 +139,7 @@ case "$*" in
     esac
   ;;
 
-  'modified manifest for '*)
+  'modified manifest for '*) # doc+ [DIRs...] - Prints a list of files and their modified times.
     shift; shift; shift
     while read -r FPATH ; do
       echo "$FPATH $(stat -c '%y' "$FPATH")"
