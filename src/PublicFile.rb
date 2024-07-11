@@ -60,7 +60,7 @@ class PublicFile
         data = {
           'Origin' => new_file.path,
           'Key' => new_file.public_path,
-          'Etag' => new_file.etag,
+          'ETag' => new_file.etag,
           'LastModified' => new_file.created_at,
           'mime' => `www mime '#{new_file.raw}'`.strip
         }
@@ -77,6 +77,19 @@ class PublicFile
       File.write(file_path, json)
       puts "=== Wrote: #{file_path}"
     end
+
+    def upload_list
+      uploaded = JSON.parse(File.read('tmp/public_files_uploaded.json'))['Contents']
+      up_keys = uploaded.map { |x| x['ETag'].gsub('"', '') }
+      local_files = JSON.parse(File.read('tmp/public_files.json'))
+      local_keys = local_files.values.map { |x| x['ETag']}
+      need_to_upload = local_keys.each_with_object([]) do |lf, arr|
+        arr.push(lf) unless up_keys.include?(lf)
+      end
+
+      local_files.values.select: { |x| puts "#{x['Origin']} -> #{x['Key']}" if need_to_upload.include?(x['ETag'])}
+    end
+
   end
   # --- class << self
 
@@ -140,7 +153,14 @@ if $PROGRAM_NAME == __FILE__
 
   when 'upload list'
     uploaded = JSON.parse(File.read('tmp/public_files_uploaded.json'))['Contents']
-    puts uploaded.inspect
+    up_keys = uploaded.map { |x| x['ETag'].gsub('"', '') }
+    local_files = JSON.parse(File.read('tmp/public_files.json'))
+    local_keys = local_files.values.map { |x| x['ETag']}
+    need_to_upload = local_keys.each_with_object([]) do |lf, arr|
+      arr.push(lf) unless up_keys.include?(lf)
+    end
+
+    local_files.values.each { |x| puts "#{x['Origin']} -> #{x['Key']}" if need_to_upload.include?(x['ETag'])}
 
 
   when 'update raw file manifest'

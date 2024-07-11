@@ -24,7 +24,7 @@ type SITE_SETTINGS = {
 }
 
 const THE_SITE_SETTINGS = await (Bun.file('settings.json').json() as Promise<SITE_SETTINGS>);
-const PUBLIC_FILES = await (Bun.file('public_files.json').json() as Promise<FILE_MANIFEST>)
+const PUBLIC_FILES = await (Bun.file('tmp/public_files.json').json() as Promise<FILE_MANIFEST>)
 
 type FILE_ROW = {
   local_path: string,
