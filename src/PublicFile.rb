@@ -58,12 +58,11 @@ class PublicFile
       dir = normalize_dir(raw_dir)
       all(dir).each_with_object({}) do |new_file, memo|
         data = {
-          'local_path' => new_file.path,
-          'public_path' => new_file.public_path,
-          'etag' => new_file.etag[0..ETAG_SIZE],
-          'md5' => new_file.md5,
-          'created_at' => new_file.created_at,
-          'mime_type' => `www mime '#{new_file.raw}'`.strip
+          'Origin' => new_file.path,
+          'Key' => new_file.public_path,
+          'Etag' => new_file.etag,
+          'LastModified' => new_file.created_at,
+          'mime' => `www mime '#{new_file.raw}'`.strip
         }
 
         memo[new_file.path.sub(dir, '')] = data
@@ -72,7 +71,7 @@ class PublicFile
     end
 
     def write_manifest(settings)
-      file_path = 'public_files.json'
+      file_path = 'tmp/public_files.json'
       public_files = manifest(File.join(settings['BUILD_DIR']))
       json = JSON.pretty_generate(public_files)
       File.write(file_path, json)
@@ -81,7 +80,7 @@ class PublicFile
   end
   # --- class << self
 
-  attr_reader :dir, :raw, :md5, :etag, :path, :created_at, :public_path
+  attr_reader :dir, :raw, :etag, :path, :created_at, :public_path
 
   ETAG_SIZE = 8
 
@@ -89,8 +88,7 @@ class PublicFile
     @dir = PublicFile.normalize_dir(raw_dir)
     @raw = raw
     @path = raw.sub(@dir, '')
-    @etag = `sha256sum "#{raw}"`.split.first
-    @md5 =`md5sum "#{raw}"`.split.first
+    @etag = `md5sum "#{raw}"`.split.first
     @created_at = `stat -c "%W" "#{raw}"`.strip
     @public_path = PublicFile.add_etag_to_file_name(etag, path)
   end
@@ -101,8 +99,7 @@ class PublicFile
       'path' => path,
       'dir' => dir,
       'public_path' => public_path,
-      'etag' => etag,
-      'md5' => md5
+      'etag' => etag
     )
   end
 end
@@ -140,6 +137,11 @@ if $PROGRAM_NAME == __FILE__
         warn "--- File removed: #{x}"
       end
     end
+
+  when 'upload list'
+    uploaded = JSON.parse(File.read('tmp/public_files_uploaded.json'))['Contents']
+    puts uploaded.inspect
+
 
   when 'update raw file manifest'
     j = JSON.parse(File.read('settings.json'))

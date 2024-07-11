@@ -34,6 +34,13 @@ case "$*" in
   ;;
 
   "public upload") # doc
+    shift
+    "$THIS_DIR"/src/PublicFile.rb "$@"
+  ;;
+
+  "public upload list") # doc
+    shift
+    "$THIS_DIR"/src/PublicFile.rb "$@"
   ;;
 
   "public prune") # doc
