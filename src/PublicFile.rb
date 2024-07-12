@@ -87,7 +87,7 @@ class PublicFile
         arr.push(lf) unless up_keys.include?(lf)
       end
 
-      local_files.values.select: { |x| puts "#{x['Origin']} -> #{x['Key']}" if need_to_upload.include?(x['ETag'])}
+      local_files.values.select { |x| need_to_upload.include?(x['ETag']) }
     end
 
   end
@@ -152,16 +152,17 @@ if $PROGRAM_NAME == __FILE__
     end
 
   when 'upload list'
-    uploaded = JSON.parse(File.read('tmp/public_files_uploaded.json'))['Contents']
-    up_keys = uploaded.map { |x| x['ETag'].gsub('"', '') }
-    local_files = JSON.parse(File.read('tmp/public_files.json'))
-    local_keys = local_files.values.map { |x| x['ETag']}
-    need_to_upload = local_keys.each_with_object([]) do |lf, arr|
-      arr.push(lf) unless up_keys.include?(lf)
-    end
+    PublicFile.upload_list.each { |lf| puts "#{lf['Origin']} => #{lf['Key']}" }
 
-    local_files.values.each { |x| puts "#{x['Origin']} -> #{x['Key']}" if need_to_upload.include?(x['ETag'])}
-
+  when /^upload to ([^\ ]+)+$/
+    cloudflare_env = $1
+    settings = JSON.parse(File.read('settings.json'))
+    bucket_name = settings['BUCKET_NAME']
+    PublicFile.upload_list.each { |lf|
+      cmd = %Q(bun x wrangler r2 object put "#{bucket_name}/public#{lf['Key']}" --file "build#{lf['Origin']}" --content-type "#{lf['mime']}")
+      puts "--- #{cmd}"
+      exit($?.exitstatus) unless system(cmd)
+    }
 
   when 'update raw file manifest'
     j = JSON.parse(File.read('settings.json'))
