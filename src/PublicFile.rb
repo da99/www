@@ -154,12 +154,12 @@ if $PROGRAM_NAME == __FILE__
   when 'upload list'
     PublicFile.upload_list.each { |lf| puts "#{lf['Origin']} => #{lf['Key']}" }
 
-  when /^upload to ([^\ ]+)+$/
-    cloudflare_env = $1
+  when "upload"
+    build_target = ENV['BUILD_TARGET'] or raise("BUILD_TARGET not specified")
     settings = JSON.parse(File.read('settings.json'))
     bucket_name = settings['BUCKET_NAME']
     PublicFile.upload_list.each { |lf|
-      cmd = %Q(bun x wrangler r2 object put "#{bucket_name}/public#{lf['Key']}" --file "build#{lf['Origin']}" --content-type "#{lf['mime']}")
+      cmd = %Q(bun x wrangler r2 object put "#{bucket_name}/#{build_target}#{lf['Key']}" --file "build#{lf['Origin']}" --content-type "#{lf['mime']}")
       puts "--- #{cmd}"
       exit($?.exitstatus) unless system(cmd)
     }

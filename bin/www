@@ -33,7 +33,7 @@ case "$*" in
     bat "$THIS_DIR/README.md"
   ;;
 
-  "public upload to "*) # doc
+  "public upload") # doc
     shift
     "$THIS_DIR"/src/PublicFile.rb "$@"
   ;;
