@@ -80,14 +80,15 @@ class PublicFile
 
     def upload_list
       uploaded = JSON.parse(File.read('tmp/public_files_uploaded.json'))['Contents']
-      up_keys = uploaded.map { |x| x['ETag'].gsub('"', '') }
+      up_keys = uploaded.map { |x| x['Key'] }
       local_files = JSON.parse(File.read('tmp/public_files.json'))
-      local_keys = local_files.values.map { |x| x['ETag']}
-      need_to_upload = local_keys.each_with_object([]) do |lf, arr|
-        arr.push(lf) unless up_keys.include?(lf)
-      end
+      local_keys = local_files.values.map { |x| "#{ENV['BUILD_TARGET']}#{x['Key']}" }
+      need_to_upload = local_keys - up_keys
+      # each_with_object([]) do |lf, arr|
+      #   arr.push(lf) unless up_keys.include?(lf)
+      # end
 
-      local_files.values.select { |x| need_to_upload.include?(x['ETag']) }
+      local_files.values.select { |x| need_to_upload.include?("#{ENV['BUILD_TARGET']}#{x['Key']}") }
     end
 
   end
