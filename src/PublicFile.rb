@@ -153,7 +153,7 @@ if $PROGRAM_NAME == __FILE__
     end
 
   when 'upload list'
-    PublicFile.upload_list.each { |lf| puts "#{lf['Origin']} => #{lf['Key']}" }
+    PublicFile.upload_list.each { |lf| puts "#{lf['Origin']} => #{ENV['BUILD_TARGET']}#{lf['Key']}" }
 
   when "upload"
     build_target = ENV['BUILD_TARGET'] or raise("BUILD_TARGET not specified")
