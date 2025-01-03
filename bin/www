@@ -27,9 +27,18 @@ def add_etag_to_file_name(etag, path)
   pieces.join('/')
 end
 
+def mime_type(fname)
+  content = `da www mime "#{fname}"`.strip
+  raise "!!! Could not determine mime type for: #{fname}" unless $CHILD_STATUS.success?
+
+  content
+end
+
 def file_info(fname)
   etag = `md5sum "#{fname}"`.strip.split.first
-  { etag: etag, public_path: add_etag_to_file_name(etag, strip_build_path(fname)) }
+  { etag: etag,
+    mime: mime_type(fname),
+    public_path: add_etag_to_file_name(etag, strip_build_path(fname)) }
 end
 
 case cmd
