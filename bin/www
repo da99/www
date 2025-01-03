@@ -17,19 +17,19 @@ def strip_build_path(raw)
   raw.sub(%r{/?build/}, '/')
 end
 
-def add_etag(etag, path)
-  return path if path[%r|/lib.index.[^\.]{8,16}.mjs|]
+def add_etag_to_file_name(etag, path)
+  return path if path[%r|/lib.index.[^.]{8,16}.mjs|]
+  return path unless path[/\.(css|html|mjs|js)$/]
 
   pieces = path.split('/')
   last = pieces.pop
-  puts etag.inspect
   pieces.push("#{etag[0..ETAG_SIZE]}.#{last}")
   pieces.join('/')
 end
 
 def file_info(fname)
   etag = `md5sum "#{fname}"`.strip.split.first
-  { etag: etag, public_path: strip_build_path(add_etag(etag, fname)) }
+  { etag: etag, public_path: add_etag_to_file_name(etag, strip_build_path(fname)) }
 end
 
 case cmd
@@ -77,13 +77,33 @@ when 'static build'
     bun_files.each { |x| File.unlink x }
   end
 
-  list = raw_file_list.inject({}) do |memo, fname|
+  public_files = raw_file_list.each_with_object({}) do |fname, memo|
     memo[strip_build_path(fname)] = file_info(fname)
-    memo
   end
 
-  File.write('public_files.json', JSON.generate(list))
-  warn "--- Wrote: public_files.json"
+  Dir.chdir(BUILD_DIR) do
+    public_files.each do |origin, info|
+      next unless origin[/\.html$/]
+
+      warn "--- Changing static file paths: #{origin} -> #{info[:public_path]}"
+      content = File.read(File.join('.', origin))
+      new_content = content.gsub(%r@(src|href)="([^"]+)"@) do |x|
+        attr = Regexp.last_match(1)
+        old_path = Regexp.last_match(2)
+        path_info = public_files[old_path]
+        if path_info
+          %(#{attr}="#{path_info[:public_path]}")
+        else
+          x
+        end
+      end
+      File.write(File.join('.', info[:public_path]), new_content)
+      File.unlink(File.join('.', origin))
+    end
+  end
+
+  File.write('public_files.json', JSON.pretty_generate(public_files))
+  warn '--- Wrote: public_files.json'
 
 else
   warn "!!! Unknown command: #{cmd}"
