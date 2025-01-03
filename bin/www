@@ -1,0 +1,91 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'json'
+require 'English'
+ETAG_SIZE = 8
+BUILD_DIR = 'build'
+
+cmd = ARGV.join(' ')
+prog = __FILE__.split('/').last
+
+def raw_file_list
+  `find "#{BUILD_DIR}" -type f -not -name '.*'`.strip.split("\n")
+end # def
+
+def strip_build_path(raw)
+  raw.sub(%r{/?build/}, '/')
+end
+
+def add_etag(etag, path)
+  return path if path[%r|/lib.index.[^\.]{8,16}.mjs|]
+
+  pieces = path.split('/')
+  last = pieces.pop
+  puts etag.inspect
+  pieces.push("#{etag[0..ETAG_SIZE]}.#{last}")
+  pieces.join('/')
+end
+
+def file_info(fname)
+  etag = `md5sum "#{fname}"`.strip.split.first
+  { etag: etag, public_path: strip_build_path(add_etag(etag, fname)) }
+end
+
+case cmd
+when '-h', '--help', 'help'
+  puts "#{prog} -h|--help|help  --  Show this message."
+
+when 'static build'
+  bun_files = []
+  raw_file_list.each do |raw_file|
+    case raw_file
+    when /.html.mts$/
+
+      new_file = raw_file.sub(/.html.mts/, '.html')
+      warn "--- Compiling #{raw_file} -> #{new_file}"
+      output = `bun run #{raw_file}`.strip
+      exit 2 unless $CHILD_STATUS.success?
+      File.write(new_file, output)
+      File.unlink(raw_file)
+
+    when %r{section/base/.+\.css$}
+      next
+
+    when %r{section/.+\.css$}
+      warn "--- Compiling #{raw_file}"
+      tmp_file = "#{raw_file}.tmp"
+      system(%( bun x lightningcss --minify --bundle "#{raw_file}" -o "#{tmp_file}" ))
+      File.rename(tmp_file, raw_file)
+
+    when %r{section/.+\.mts$}
+      bun_files.push(raw_file)
+    end
+  end # each
+
+  unless bun_files.empty?
+    warn "--- TS files: #{bun_files.inspect}"
+    system(
+      'bun', 'build',
+      '--target', 'browser',
+      '--outdir', 'build/section',
+      '--splitting',
+      '--chunk-naming', '[dir]/lib.[name].[hash].mjs',
+      '--entry-naming', '[dir]/[name].mjs',
+      *bun_files
+    )
+    bun_files.each { |x| File.unlink x }
+  end
+
+  list = raw_file_list.inject({}) do |memo, fname|
+    memo[strip_build_path(fname)] = file_info(fname)
+    memo
+  end
+
+  File.write('public_files.json', JSON.generate(list))
+  warn "--- Wrote: public_files.json"
+
+else
+  warn "!!! Unknown command: #{cmd}"
+  exit 1
+end # case
