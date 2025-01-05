@@ -14,6 +14,35 @@ DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
 cmd = ARGV.join(' ')
 prog = __FILE__.split('/').last
 
+class FILES
+  class << self
+    def etag(fname)
+     `md5sum "#{fname}"`.strip.split.first
+    end
+
+    def key_name(filename)
+      filename.gsub(%r{(#{BUILD_DIR}|#{PUBLID_DIR}|\.)/}, '')
+    end
+
+    def file_uploaded_json
+      @file_uploaded_json ||= "tmp/#{get_env('BUCKET_NAME')}.uploaded_files.json"
+    end
+
+    def uploaded
+      @uploaded ||= begin
+                      File.write(file_uploaded_json, '[]') unless File.exist?(file_uploaded_json)
+                      raw = JSON.parse File.read(file_uploaded_json)
+                      raw.each_with_object({}) { |info, o| o[info['key']] = info }
+                    end
+    end
+
+    def uploaded?(filepath)
+      k = FILES.key_name(filepath)
+      uploaded[k] && uploaded[k]['etag'] == FILES.etag(filepath)
+    end
+  end # class
+end # class
+
 def hours_age_of_file(filepath)
   content = run_command("stat -c %Y '#{filepath}'")
   ((content.to_i - NOW) / 60).to_i
@@ -35,9 +64,9 @@ end
 def update_files_uploaded
   bucket = get_env('BUCKET_NAME')
   up_files = "tmp/#{bucket}.uploaded_files.json"
-  raw_content = run_command("mc ls --no-color --recursive --json '#{bucket}/#{bucket}' ")
-  new_content = "[#{raw_content.gsub(/}$(?!\Z)/, '},')}]"
-  File.write(up_files, new_content)
+  raw = run_command("mc ls --no-color --recursive --json '#{bucket}/#{bucket}' ")
+  new_content = raw.split("\n").map { |x| JSON.parse(x) }
+  File.write(up_files, JSON.pretty_generate(new_content))
   warn "--- wrote: #{up_files}"
 end
 
@@ -77,7 +106,7 @@ def quick_file_info(fname)
 end
 
 def file_info(fname)
-  etag = `md5sum "#{fname}"`.strip.split.first
+  etag = FILES.etag(fname)
   { etag: etag,
     public_path: add_etag_to_file_name(etag, strip_build_path(fname)) }
 end
