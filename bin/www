@@ -35,8 +35,8 @@ end
 def update_files_uploaded
   bucket = get_env('BUCKET_NAME')
   up_files = "tmp/#{bucket}.uploaded_files.json"
-  raw_content = run_command("mc ls '#{bucket}/#{bucket}'  --recursive --json")
-  new_content = "[#{raw_content.gsub(/^}$/, '},')}]"
+  raw_content = run_command("mc ls --no-color --recursive --json '#{bucket}/#{bucket}' ")
+  new_content = "[#{raw_content.gsub(/}$(?!\Z)/, '},')}]"
   File.write(up_files, new_content)
   warn "--- wrote: #{up_files}"
 end
