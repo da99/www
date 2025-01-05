@@ -14,8 +14,24 @@ DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
 cmd = ARGV.join(' ')
 prog = __FILE__.split('/').last
 
+class BUILD
+  class << self
+    def file_list
+      find_files(BUILD, "-not -name '.*'")
+    end
+  end # class
+end # class BUILD
+
 class FILES
   class << self
+    def bucket_name
+      @bucket_name ||= get_env('BUCKET_NAME')
+    end
+
+    def mime_type(fname)
+      run_command("da www mime '#{fname}'")
+    end
+
     def etag(fname)
      `md5sum "#{fname}"`.strip.split.first
     end
@@ -24,22 +40,44 @@ class FILES
       filename.gsub(%r{(#{BUILD_DIR}|#{PUBLID_DIR}|\.)/}, '')
     end
 
-    def file_uploaded_json
-      @file_uploaded_json ||= "tmp/#{get_env('BUCKET_NAME')}.uploaded_files.json"
+    def files_uploaded_json
+      @files_uploaded_json ||= "tmp/#{bucket_name}.uploaded_files.json"
     end
 
     def uploaded
       @uploaded ||= begin
-                      File.write(file_uploaded_json, '[]') unless File.exist?(file_uploaded_json)
-                      raw = JSON.parse File.read(file_uploaded_json)
+                      File.write(files_uploaded_json, '[]') unless File.exist?(files_uploaded_json)
+                      update_files_uploaded_json if hours_age_of_file(files_uploaded_json) > 6
+                      raw = JSON.parse File.read(files_uploaded_json)
                       raw.each_with_object({}) { |info, o| o[info['key']] = info }
                     end
     end
 
-    def uploaded?(filepath)
-      k = FILES.key_name(filepath)
-      uploaded[k] && uploaded[k]['etag'] == FILES.etag(filepath)
+    def update_files_uploaded_json
+      raw = run_command("mc ls --no-color --recursive --json '#{bucket_name}/#{bucket_name}' ")
+      new_content = raw.split("\n").map { |x| JSON.parse(x) }
+      File.write(files_uploaded_json, JSON.pretty_generate(new_content))
+      warn "--- wrote: #{up_files}"
     end
+
+
+    def uploaded?(key, filepath)
+      uploaded[key] && uploaded[key]['etag'] == FILES.etag(filepath)
+    end
+
+    def upload(filelist)
+      filelist.each do |file|
+        k = FILES.key_name(file)
+        etag = FILES.etag(file)
+        already_up = uploaded[k] && uploaded[k]['etag'] == etag
+        next if already_up
+
+        mime = FILES.mime_type(file)
+        system_command(%(
+          bun x wrangler r2 object put '#{FILES.bucket_name}/#{key}' --file '#{file}' --content-type '#{mime}'"
+        ))
+      end # each file
+    end # def
   end # class
 end # class
 
@@ -48,26 +86,27 @@ def hours_age_of_file(filepath)
   ((content.to_i - NOW) / 60).to_i
 end
 
-def run_command(cmd)
+def system_command(cmd)
   warn "--- #{cmd}"
-  content = `#{cmd}`.strip
+  system(cmd.strip)
   return content if $CHILD_STATUS.success?
 
   warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}: #{cmd}"
 end
 
+def run_command(raw_cmd)
+  cmd = raw_cmd.strip
+  warn "--- #{cmd}"
+  content = `#{cmd}`
+  return content if $CHILD_STATUS.success?
+
+  warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}: #{cmd.inspect}"
+  content.strip
+end
+
 def get_env(key)
   ENV.key?(key) || raise("!!! Env key not found: #{key}")
   ENV[key]
-end
-
-def update_files_uploaded
-  bucket = get_env('BUCKET_NAME')
-  up_files = "tmp/#{bucket}.uploaded_files.json"
-  raw = run_command("mc ls --no-color --recursive --json '#{bucket}/#{bucket}' ")
-  new_content = raw.split("\n").map { |x| JSON.parse(x) }
-  File.write(up_files, JSON.pretty_generate(new_content))
-  warn "--- wrote: #{up_files}"
 end
 
 def find_files(dir, ext)
@@ -93,12 +132,6 @@ def add_etag_to_file_name(etag, path)
   pieces.join('/')
 end
 
-def mime_type(fname)
-  content = `da www mime "#{fname}"`.strip
-  raise "!!! Could not determine mime type for: #{fname}" unless $CHILD_STATUS.success?
-
-  content
-end
 
 def quick_file_info(fname)
   { etag: "#{NOW}-#{fname}",
@@ -207,29 +240,11 @@ when 'static build rename'
   File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
   warn "--- Wrote: #{PUBLIC_FILES_JSON}"
 
-when 'update files uploaded'
+when 'static update uploaded file list'
   update_files_uploaded
 
 when 'static upload'
-  bucket = get_env('BUCKET_NAME')
-  uploaded_files = begin
-    up_files = "tmp/#{bucket}.uploaded_files.json"
-    unless File.exist?(up_files)
-      raw = run_command(%( mc ls --recursive --no-color '#{bucket}/#{bucket}' | tr -s ' ' | cut -d' ' -f6 ))
-      File.write(up_files, raw.strip)
-    end # if
-    File.read(up_files).split("\n")
-  end # uploaded_files
-
-  target_files = raw_file_list
-                 .map { |x| x.sub(BUILD_DIR, '') }
-                 .reject { |curr| uploaded_files.include?(curr) }
-
-  puts target_files.inspect
-  puts target_files.size
-  # filter out files that have been uploaded
-  # upload files
-  #   get mime type
+  FILES.upload(BUILD.file_list)
 else
   warn "!!! Unknown command: #{cmd}"
   exit 1
