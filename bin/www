@@ -3,14 +3,30 @@
 
 require 'json'
 require 'English'
+
 ETAG_SIZE = 8
 BUILD_DIR = 'build'
+PUBLID_DIR = 'public'
+PUBLIC_FILES_JSON = 'build/files.json'
+NOW = Time.now.to_i
+DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
 
 cmd = ARGV.join(' ')
 prog = __FILE__.split('/').last
 
-def raw_file_list
-  `find "#{BUILD_DIR}" -type f -not -name '.*'`.strip.split("\n")
+def get_env(key)
+  ENV.key?(key) || raise("!!! Env key not found: #{key}")
+  ENV[key]
+end
+
+def find_files(dir, ext)
+  raw = `find "#{dir}" -type f #{ext}`
+  exit 2 unless $CHILD_STATUS.success?
+  raw.strip.split("\n")
+end # def
+
+def raw_file_list(dir = BUILD_DIR)
+  find_files(dir, "-not -name '.*'")
 end # def
 
 def strip_build_path(raw)
@@ -18,8 +34,7 @@ def strip_build_path(raw)
 end
 
 def add_etag_to_file_name(etag, path)
-  return path if path[%r|/lib.index.[^.]{8,16}.mjs|]
-  return path unless path[/\.(css|html|mjs|js)$/]
+  return path if path[DONT_RENAME]
 
   pieces = path.split('/')
   last = pieces.pop
@@ -34,23 +49,49 @@ def mime_type(fname)
   content
 end
 
+def quick_file_info(fname)
+  { etag: "#{NOW}-#{fname}",
+    public_path: strip_build_path(fname) }
+end
+
 def file_info(fname)
   etag = `md5sum "#{fname}"`.strip.split.first
   { etag: etag,
-    mime: mime_type(fname),
     public_path: add_etag_to_file_name(etag, strip_build_path(fname)) }
 end
 
-case cmd
-when '-h', '--help', 'help'
-  puts "#{prog} -h|--help|help  --  Show this message."
+def build_mjs(bun_files = find_files('build', "-name '*.mts' -and -not -name '*.html.mts' "))
+  if bun_files.empty?
+    warn '--- No .mts files found.'
+    return false
+  end
 
-when 'static build'
-  bun_files = []
-  raw_file_list.each do |raw_file|
+  warn "--- TS files: #{bun_files.inspect}"
+  system(
+    'bun', 'build', '--target', 'browser',
+    '--outdir', 'build/section', '--splitting',
+    '--chunk-naming', '[dir]/lib.[name].[hash].mjs',
+    '--entry-naming', '[dir]/[name].mjs', *bun_files
+  )
+  bun_files.each { |x| File.unlink x }
+end # def
+
+def build_public_files_json
+  public_files = raw_file_list.each_with_object({}) do |fname, memo|
+    memo[strip_build_path(fname)] = file_info(fname)
+  end
+  File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
+  warn "--- Wrote: #{PUBLIC_FILES_JSON}"
+end # def
+
+def static_build(files = raw_file_list)
+  mts_files = []
+  files.each do |raw_file|
     case raw_file
-    when /.html.mts$/
+    when %r{section/base/.+\.css$}
+      next
 
+    when /.html.mts$/
       new_file = raw_file.sub(/.html.mts/, '.html')
       warn "--- Compiling #{raw_file} -> #{new_file}"
       output = `bun run #{raw_file}`.strip
@@ -58,41 +99,41 @@ when 'static build'
       File.write(new_file, output)
       File.unlink(raw_file)
 
-    when %r{section/base/.+\.css$}
-      next
-
     when %r{section/.+\.css$}
       warn "--- Compiling #{raw_file}"
       tmp_file = "#{raw_file}.tmp"
       system(%( bun x lightningcss --minify --bundle "#{raw_file}" -o "#{tmp_file}" ))
       File.rename(tmp_file, raw_file)
 
-    when %r{section/.+\.mts$}
-      bun_files.push(raw_file)
-    end
+    when /.mts$/
+      mts_files.push raw_file
+    end # case
   end # each
 
-  unless bun_files.empty?
-    warn "--- TS files: #{bun_files.inspect}"
-    system(
-      'bun', 'build',
-      '--target', 'browser',
-      '--outdir', 'build/section',
-      '--splitting',
-      '--chunk-naming', '[dir]/lib.[name].[hash].mjs',
-      '--entry-naming', '[dir]/[name].mjs',
-      *bun_files
-    )
-    bun_files.each { |x| File.unlink x }
-  end
+  build_mjs mts_files unless mts_files.empty?
+end # def static_build
 
+case cmd
+when '-h', '--help', 'help'
+  puts "#{prog} -h|--help|help  --  Show this message."
+  puts "#{prog} static upload"
+  puts "#{prog} static build"
+  puts "#{prog} static build rename -- Add etag to filename."
+
+when 'static build'
+  static_build
+
+when /static build file (.+)/
+  static_build [raw_file_name.sub(PUBLID_DIR, BUILD_DIR)]
+
+when 'static build rename'
   public_files = raw_file_list.each_with_object({}) do |fname, memo|
     memo[strip_build_path(fname)] = file_info(fname)
   end
 
   Dir.chdir(BUILD_DIR) do
     public_files.each do |origin, info|
-      next unless origin[/\.html$/]
+      next if origin[/\.html$/]
 
       warn "--- Changing static file paths: #{origin} -> #{info[:public_path]}"
       content = File.read(File.join('.', origin))
@@ -111,9 +152,30 @@ when 'static build'
     end
   end
 
-  File.write('public_files.json', JSON.pretty_generate(public_files))
-  warn '--- Wrote: public_files.json'
+  File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
+  warn "--- Wrote: #{PUBLIC_FILES_JSON}"
 
+when 'static upload'
+  bucket = get_env('BUCKET_NAME')
+  uploaded_files = begin
+    up_files = "tmp/#{bucket}.uploaded_files.json"
+    unless File.exist?(up_files)
+      raw = `mc ls --recursive --no-color "#{bucket}/#{bucket}" | tr -s ' ' | cut -d' ' -f6`
+      exit 2 unless $CHILD_STATUS.success?
+      File.write(up_files, raw.strip)
+    end # if
+    File.read(up_files).split("\n")
+  end # uploaded_files
+
+  target_files = raw_file_list
+                 .map { |x| x.sub(BUILD_DIR, '') }
+                 .reject { |curr| uploaded_files.include?(curr) }
+
+  puts target_files.inspect
+  puts target_files.size
+  # filter out files that have been uploaded
+  # upload files
+  #   get mime type
 else
   warn "!!! Unknown command: #{cmd}"
   exit 1
