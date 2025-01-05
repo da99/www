@@ -14,9 +14,31 @@ DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
 cmd = ARGV.join(' ')
 prog = __FILE__.split('/').last
 
+def hours_age_of_file(filepath)
+  content = run_command("stat -c %Y '#{filepath}'")
+  ((content.to_i - NOW) / 60).to_i
+end
+
+def run_command(cmd)
+  warn "--- #{cmd}"
+  content = `#{cmd}`.strip
+  return content if $CHILD_STATUS.success?
+
+  warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}: #{cmd}"
+end
+
 def get_env(key)
   ENV.key?(key) || raise("!!! Env key not found: #{key}")
   ENV[key]
+end
+
+def update_files_uploaded
+  bucket = get_env('BUCKET_NAME')
+  up_files = "tmp/#{bucket}.uploaded_files.json"
+  raw_content = run_command("mc ls '#{bucket}/#{bucket}'  --recursive --json")
+  new_content = "[#{raw_content.gsub(/^}$/, '},')}]"
+  File.write(up_files, new_content)
+  warn "--- wrote: #{up_files}"
 end
 
 def find_files(dir, ext)
@@ -119,6 +141,7 @@ when '-h', '--help', 'help'
   puts "#{prog} static upload"
   puts "#{prog} static build"
   puts "#{prog} static build rename -- Add etag to filename."
+  puts "#{prog} update files uploaded"
 
 when 'static build'
   static_build
@@ -155,13 +178,15 @@ when 'static build rename'
   File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
   warn "--- Wrote: #{PUBLIC_FILES_JSON}"
 
+when 'update files uploaded'
+  update_files_uploaded
+
 when 'static upload'
   bucket = get_env('BUCKET_NAME')
   uploaded_files = begin
     up_files = "tmp/#{bucket}.uploaded_files.json"
     unless File.exist?(up_files)
-      raw = `mc ls --recursive --no-color "#{bucket}/#{bucket}" | tr -s ' ' | cut -d' ' -f6`
-      exit 2 unless $CHILD_STATUS.success?
+      raw = run_command(%( mc ls --recursive --no-color '#{bucket}/#{bucket}' | tr -s ' ' | cut -d' ' -f6 ))
       File.write(up_files, raw.strip)
     end # if
     File.read(up_files).split("\n")
