@@ -1,6 +1,12 @@
-Style/CommentedKeyword:
-  Exclude:
-    - '**/*.rb'
-    - 'bin/www*'
 Documentation:
+  Enabled: false
+Naming/FileName:
+  Enabled: false
+Naming/ClassAndModuleCamelCase:
+  Enabled: false
+Style/CommentedKeyword:
+  Enabled: false
+Style/Documentation:
+  Enabled: false
+Style/MethodLength:
   Enabled: false

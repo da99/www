@@ -2,8 +2,8 @@
 # frozen_string_literal: true
 
 require 'json'
-require 'open3'
 require 'English'
+require_relative '../lib/OS'
 
 ETAG_SIZE = 8
 BUILD_DIR = 'build'
@@ -11,42 +11,6 @@ PUBLIC_FILES_JSON = 'build/files.json'
 SETTINGS_JSON = 'settings.json'
 NOW = Time.now.to_i
 DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
-
-class OS
-  class << self
-    def env(key)
-      ENV.key?(key) || raise("!!! Env key not found: #{key}")
-      ENV[key]
-    end
-
-    def sanitize_cmd(raw)
-      args = raw.flatten
-      return args.first.split if args.size == 1
-
-      args
-    end
-
-    def system(*raw)
-      cmd = sanitize_cmd(raw)
-      warn "--- #{cmd.inspect}"
-      result = Kernel.system(*cmd)
-      return result if $CHILD_STATUS.success?
-
-      warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}"
-      exit $CHILD_STATUS.exitstatus
-    end
-
-    def run(*cmd)
-      warn "--- #{cmd.join ' '}"
-      content, stat = Open3.capture2(*cmd)
-      return content.strip if stat.success?
-
-      warn "!!! Failed with exit #{stat.exitstatus}: #{cmd.inspect}"
-      puts content.strip
-      exit stat.exitstatus
-    end
-  end # class << self
-end # class
 
 class FILES
   class << self
