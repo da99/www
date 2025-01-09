@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'json'
+require 'open3'
 require 'English'
 
 ETAG_SIZE = 8
@@ -18,9 +19,14 @@ class OS
       ENV[key]
     end
 
+    def sanitize_cmd(raw)
+      return raw.first.split if raw.size == 1
+      raw
+    end
+
     def system(*cmd)
       warn "--- #{cmd.inspect}"
-      result = Kernel.system(*cmd)
+      result = Kernel.system(*sanitize_cmd(cmd))
       return result if $CHILD_STATUS.success?
 
       warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}"
@@ -29,12 +35,12 @@ class OS
 
     def run(*cmd)
       warn "--- #{cmd.join ' '}"
-      content = `#{cmd.join ' '}`
-      return content.strip if $CHILD_STATUS.success?
+      content, stat = Open3.capture2(*cmd)
+      return content.strip if stat.success?
 
-      warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}: #{cmd.inspect}"
+      warn "!!! Failed with exit #{stat.exitstatus}: #{cmd.inspect}"
       puts content.strip
-      exit $CHILD_STATUS.exitstatus
+      exit stat.exitstatus
     end
   end # class << self
 end # class
@@ -109,13 +115,13 @@ class FILES
       File.join(BUILD_DIR, temp_path)
     end # def
 
-    def uploaded
-      @uploaded ||= begin
-                      File.write(files_uploaded_json, '[]') unless File.exist?(files_uploaded_json)
-                      update_files_uploaded_json if hours_age_of_file(files_uploaded_json) > 6
-                      raw = JSON.parse File.read(files_uploaded_json)
-                      raw.each_with_object({}) { |info, o| o[info['key']] = info }
-                    end
+    def uploaded_list
+      @uploaded_list ||= begin
+                           File.write(files_uploaded_json, '[]') unless File.exist?(files_uploaded_json)
+                           update_files_uploaded_json if hours_age_of_file(files_uploaded_json) > 6
+                           raw = JSON.parse File.read(files_uploaded_json)
+                           raw.each_with_object({}) { |info, o| o[info['key']] = info }
+                         end
     end
 
     def update_files_uploaded_json
@@ -126,7 +132,7 @@ class FILES
     end
 
     def uploaded?(key, filepath)
-      uploaded[key] && uploaded[key]['etag'] == FILES.etag(filepath)
+      uploaded_list[key] && uploaded_list[key]['etag'] == FILES.etag(filepath)
     end
 
     def upload(filelist)
@@ -136,7 +142,7 @@ class FILES
 
         unless filelist.size == 1
           etag = FILES.etag(file)
-          already_up = uploaded[k] && uploaded[k]['etag'] == etag
+          already_up = uploaded_list[k] && uploaded_list[k]['etag'] == etag
           next if already_up
         end
 
