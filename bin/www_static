@@ -1,0 +1,309 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'json'
+require 'English'
+
+ETAG_SIZE = 8
+BUILD_DIR = 'build'
+PUBLIC_FILES_JSON = 'build/files.json'
+SETTINGS_JSON = 'settings.json'
+NOW = Time.now.to_i
+DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
+
+class OS
+  class << self
+    def env(key)
+      ENV.key?(key) || raise("!!! Env key not found: #{key}")
+      ENV[key]
+    end
+
+    def system(*cmd)
+      warn "--- #{cmd.inspect}"
+      result = Kernel.system(*cmd)
+      return result if $CHILD_STATUS.success?
+
+      warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}"
+      exit $CHILD_STATUS.exitstatus
+    end
+
+    def run(*cmd)
+      warn "--- #{cmd.join ' '}"
+      content = `#{cmd.join ' '}`
+      return content.strip if $CHILD_STATUS.success?
+
+      warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}: #{cmd.inspect}"
+      puts content.strip
+      exit $CHILD_STATUS.exitstatus
+    end
+  end # class << self
+end # class
+
+class FILES
+  class << self
+    def find(dir, ext = "-not -name '.*'")
+      raw = `find "#{dir}" -type f #{ext}`
+      exit 2 unless $CHILD_STATUS.success?
+      raw.strip.split("\n")
+    end # def
+
+    def bucket_name
+      @bucket_name ||= OS.env('BUCKET_NAME')
+    end
+
+    def mime_type(fname)
+      raise "!!! File not found: #{fname}" unless File.exist?(fname)
+
+      results = OS.run %^ bun --eval "console.log(Bun.file('#{fname}').type)" ^
+      case results
+      when 'application/octet-stream'
+        OS.run(%(  file --mime "#{fname}" | cut -d':' -f2- | cut -d' ' -f2-  ))
+      else
+        results
+      end
+    end
+
+    def etag(fname)
+      `md5sum "#{fname}"`.strip.split.first
+    end
+
+    def key_name(filename)
+      filename.sub(%r{^/?(#{BUILD_DIR}|\.)/}, '/')
+    end
+
+    def add_etag_to_file_name(etag, path)
+      return path if path[DONT_RENAME]
+
+      pieces = path.split('/')
+      last = pieces.pop
+      pieces.push("#{etag[0..ETAG_SIZE]}.#{last}")
+      pieces.join('/')
+    end
+
+    def quick_info(fname)
+      { etag: "#{NOW}-#{fname}",
+        public_path: key_name(fname) }
+    end
+
+    def info(fname)
+      etag = FILES.etag(fname)
+      { etag: etag,
+        public_path: add_etag_to_file_name(etag, FILES.key_name(fname)) }
+    end
+
+    def files_uploaded_json
+      @files_uploaded_json ||= "tmp/#{bucket_name}.uploaded_files.json"
+    end
+
+    def hours_age_of_file(filepath)
+      content = OS.run("stat -c %Y '#{filepath}'")
+      ((content.to_i - NOW) / 60).to_i
+    end
+
+    def ensure_in_build_dir(raw_filename)
+      expanded = File.expand_path(raw_filename)
+
+      temp_path = expanded.sub(File.expand_path(BUILD_DIR), '')
+      raise "!!! Invalid file: #{raw_filename}" if expanded == temp_path
+
+      File.join(BUILD_DIR, temp_path)
+    end # def
+
+    def uploaded
+      @uploaded ||= begin
+                      File.write(files_uploaded_json, '[]') unless File.exist?(files_uploaded_json)
+                      update_files_uploaded_json if hours_age_of_file(files_uploaded_json) > 6
+                      raw = JSON.parse File.read(files_uploaded_json)
+                      raw.each_with_object({}) { |info, o| o[info['key']] = info }
+                    end
+    end
+
+    def update_files_uploaded_json
+      raw = OS.run("mc ls --no-color --recursive --json '#{bucket_name}/#{bucket_name}' ")
+      new_content = raw.split("\n").map { |x| JSON.parse(x) }
+      File.write(files_uploaded_json, JSON.pretty_generate(new_content))
+      warn "--- wrote: #{up_files}"
+    end
+
+    def uploaded?(key, filepath)
+      uploaded[key] && uploaded[key]['etag'] == FILES.etag(filepath)
+    end
+
+    def upload(filelist)
+      filelist.each do |raw_filepath|
+        file = ensure_in_build_dir(raw_filepath)
+        k = FILES.key_name(file)
+
+        unless filelist.size == 1
+          etag = FILES.etag(file)
+          already_up = uploaded[k] && uploaded[k]['etag'] == etag
+          next if already_up
+        end
+
+        mime = FILES.mime_type(file)
+        OS.system(%(
+          bun x wrangler r2 object put '#{File.join FILES.bucket_name, k}' --file '#{file}' --content-type '#{mime}'
+        ))
+      end # each file
+    end # def
+  end # class
+end # class
+
+def build_mjs(bun_files = FILES.find('build', "-name '*.mts' -and -not -name '*.html.mts' "))
+  if bun_files.empty?
+    warn '--- No .mts files found.'
+    return false
+  end
+
+  warn "--- TS files: #{bun_files.inspect}"
+  case bun_files.size
+  when 1
+    OS.run('bun', 'build', '--target', 'browser', '--outfile', bun_files.first.sub(/\.mts$/, '.mjs'), *bun_files)
+  else
+    OS.run(
+      'bun', 'build', '--target', 'browser',
+      '--outdir', 'build/section', '--splitting',
+      '--chunk-naming', '[dir]/lib.[name].[hash].mjs',
+      '--entry-naming', '[dir]/[name].mjs', *bun_files
+    )
+  end
+
+  bun_files.map do |x|
+    File.unlink x
+    x.sub(/\.mts$/, '.mjs')
+  end
+end # def
+
+def build_public_files_json
+  public_files = FILES.find(BUILD_DIR).each_with_object({}) do |fname, memo|
+    memo[FILES.key_name(fname)] = FILES.info(fname)
+  end
+  File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
+  warn "--- Wrote: #{PUBLIC_FILES_JSON}"
+end # def
+
+def static_build(files = FILES.find(BUILD_DIR))
+  mts_files = []
+  new_files = []
+  files.each do |raw_file|
+    case raw_file
+    when %r{section/base/.+\.css$}
+      new_files.push raw_file
+      next
+
+    when %r{section/base/.+\.mts$}
+      new_files.push raw_file
+      next
+
+    when /\.html\.mts$/
+      new_file = raw_file.sub(/\.html\.mts$/, '.html')
+      new_files.push new_file
+      warn "--- Compiling #{raw_file} -> #{new_file}"
+      output = `bun run #{raw_file}`.strip
+      exit 2 unless $CHILD_STATUS.success?
+      File.write(new_file, output)
+      File.unlink(raw_file)
+
+    when %r{section/.+\.css$}
+      warn "--- Compiling #{raw_file}"
+      tmp_file = "#{raw_file}.tmp"
+      OS.system(%( bun x lightningcss --minify --bundle "#{raw_file}" -o "#{tmp_file}" ))
+      new_files.push raw_file
+      File.rename(tmp_file, raw_file)
+
+    when /\.mts$/
+      mts_files.push raw_file
+    end # case
+  end # each
+
+  return new_files if mts_files.empty?
+
+  new_files.concat build_mjs(mts_files)
+end # def static_build
+
+# =============================================================================
+# ===================== PROCESS COMMAND ARGUMENTS =============================
+# =============================================================================
+
+cmd = ARGV.join(' ')
+prog = __FILE__.split('/').last
+
+case cmd
+when '-h', '--help', 'help'
+  puts "#{prog} -h|--help|help  --  Show this message."
+  puts "#{prog} build  settings - build/settings.json"
+  puts "#{prog} build  [file FILEPATH]"
+  puts "#{prog} upload [file FILEPATH]"
+
+when 'build settings'
+  Dir.chdir(BUILD_DIR) do
+    settings = JSON.parse File.read(SETTINGS_JSON)
+    updated = false
+    settings.each_key do |key|
+      next unless ENV.key?(key)
+
+      settings[key] = ENV[key]
+      updated = true
+    end
+
+    new_content = JSON.pretty_generate(settings)
+    File.write SETTINGS_JSON, new_content if updated
+    warn new_content
+  end
+
+  puts File.join(BUILD_DIR, SETTINGS_JSON)
+
+when 'build'
+  static_build
+
+when /build file (.+)/
+  static_build([Regexp.last_match(1)]).each do |file|
+    puts file
+  end
+
+when 'build rename'
+  public_files = FILES.find(BUILD_DIR).each_with_object({}) do |fname, memo|
+    memo[FILES.key_name(fname)] = FILES.info(fname)
+  end
+
+  Dir.chdir(BUILD_DIR) do
+    public_files.each do |key, info|
+      case key
+      when /\.html$/
+        true
+      else
+        warn "--- Changing file name: #{key} -> #{info[:public_path]}"
+        File.rename(".#{key}", ".#{info[:public_path]}")
+        next
+      end # case
+
+      warn "--- Changing static file paths in: #{key} -> #{info[:public_path]}"
+      content = File.read(File.join('.', key))
+      new_content = content.gsub(/(src|href)="([^"]+)"/) do |x|
+        attr = Regexp.last_match(1)
+        old_path = Regexp.last_match(2)
+        path_info = public_files[File.expand_path("./#{old_path}", Dir.pwd).sub(Dir.pwd, '')]
+        if path_info
+          %(#{attr}="#{path_info[:public_path]}")
+        else
+          x
+        end
+      end
+      File.write(File.join('.', info[:public_path]), new_content)
+      File.unlink(File.join('.', key))
+    end
+  end
+
+  File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
+  warn "--- Wrote: #{PUBLIC_FILES_JSON}"
+
+when 'upload'
+  FILES.upload(FILES.find(BUILD_DIR))
+
+when /upload file (.+)/
+  FILES.upload([Regexp.last_match(1)])
+
+else
+  warn "!!! Unknown command: #{cmd}"
+  exit 1
+end # case

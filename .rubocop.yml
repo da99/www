@@ -1,4 +1,6 @@
 Style/CommentedKeyword:
   Exclude:
     - '**/*.rb'
-    - 'bin/www'
+    - 'bin/www*'
+Documentation:
+  Enabled: false
