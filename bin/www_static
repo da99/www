@@ -320,7 +320,9 @@ when 'upload'
   # puts ''
 
 when /upload file (.+)/
-  FILES.upload([Regexp.last_match(1)])
+  files = FILES.upload([Regexp.last_match(1)])
+  puts ''
+  files.each { |file| puts file }
 
 else
   warn "!!! Unknown command: #{cmd}"
