@@ -20,13 +20,16 @@ class OS
     end
 
     def sanitize_cmd(raw)
-      return raw.first.split if raw.size == 1
-      raw
+      args = raw.flatten
+      return args.first.split if args.size == 1
+
+      args
     end
 
-    def system(*cmd)
+    def system(*raw)
+      cmd = sanitize_cmd(raw)
       warn "--- #{cmd.inspect}"
-      result = Kernel.system(*sanitize_cmd(cmd))
+      result = Kernel.system(*cmd)
       return result if $CHILD_STATUS.success?
 
       warn "!!! Failed with exit #{$CHILD_STATUS.exitstatus}"
@@ -74,7 +77,7 @@ class FILES
     end
 
     def key_name(filename)
-      filename.sub(%r{^/?(#{BUILD_DIR}|\.)/}, '/')
+      filename.sub(%r{^/?(#{BUILD_DIR}|\.)/}, '')
     end
 
     def add_etag_to_file_name(etag, path)
@@ -117,18 +120,17 @@ class FILES
 
     def uploaded_list
       @uploaded_list ||= begin
-                           File.write(files_uploaded_json, '[]') unless File.exist?(files_uploaded_json)
-                           update_files_uploaded_json if hours_age_of_file(files_uploaded_json) > 6
+                           update_files_uploaded_json # if hours_age_of_file(files_uploaded_json) > 6
                            raw = JSON.parse File.read(files_uploaded_json)
                            raw.each_with_object({}) { |info, o| o[info['key']] = info }
                          end
     end
 
     def update_files_uploaded_json
-      raw = OS.run("mc ls --no-color --recursive --json '#{bucket_name}/#{bucket_name}' ")
+      raw = OS.run("mc ls --no-color --recursive --json #{bucket_name}/#{bucket_name} ")
       new_content = raw.split("\n").map { |x| JSON.parse(x) }
       File.write(files_uploaded_json, JSON.pretty_generate(new_content))
-      warn "--- wrote: #{up_files}"
+      warn "--- wrote: #{files_uploaded_json}"
     end
 
     def uploaded?(key, filepath)
@@ -136,21 +138,29 @@ class FILES
     end
 
     def upload(filelist)
+      uploaded_files = []
+      pids = []
       filelist.each do |raw_filepath|
         file = ensure_in_build_dir(raw_filepath)
         k = FILES.key_name(file)
 
         unless filelist.size == 1
-          etag = FILES.etag(file)
-          already_up = uploaded_list[k] && uploaded_list[k]['etag'] == etag
+          already_up = uploaded?(k, file)
           next if already_up
         end
 
         mime = FILES.mime_type(file)
-        OS.system(%(
-          bun x wrangler r2 object put '#{File.join FILES.bucket_name, k}' --file '#{file}' --content-type '#{mime}'
-        ))
+        pid = Process.fork do
+          OS.system(%W[
+            bun x wrangler r2 object put #{File.join FILES.bucket_name, k} --file #{file} --content-type #{mime}
+          ])
+        end
+        uploaded_files.push file
+        pids.push pid
       end # each file
+
+      Process.wait unless pids.empty?
+      uploaded_files
     end # def
   end # class
 end # class
@@ -213,7 +223,7 @@ def static_build(files = FILES.find(BUILD_DIR))
     when %r{section/.+\.css$}
       warn "--- Compiling #{raw_file}"
       tmp_file = "#{raw_file}.tmp"
-      OS.system(%( bun x lightningcss --minify --bundle "#{raw_file}" -o "#{tmp_file}" ))
+      OS.system(%( bun x lightningcss --minify --bundle #{raw_file} -o #{tmp_file} ))
       new_files.push raw_file
       File.rename(tmp_file, raw_file)
 
@@ -304,7 +314,10 @@ when 'build rename'
   warn "--- Wrote: #{PUBLIC_FILES_JSON}"
 
 when 'upload'
-  FILES.upload(FILES.find(BUILD_DIR))
+  files = FILES.upload(FILES.find(BUILD_DIR))
+  puts ''
+  files.each { |file| puts file }
+  # puts ''
 
 when /upload file (.+)/
   FILES.upload([Regexp.last_match(1)])
