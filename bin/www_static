@@ -3,6 +3,7 @@
 
 require 'json'
 require 'English'
+require 'fileutils'
 require_relative '../lib/OS'
 
 ETAG_SIZE = 8
@@ -73,6 +74,12 @@ class FILES
       ((content.to_i - NOW) / 60).to_i
     end
 
+    def days_age_of_file(filepath)
+      hours = hours_age_of_file(filepath)
+      return 0 if hours < 24
+      (hours / 24).to_i
+    end
+
     def ensure_in_build_dir(raw_filename)
       expanded = File.expand_path(raw_filename)
 
@@ -126,6 +133,22 @@ class FILES
       Process.wait unless pids.empty?
       uploaded_files
     end # def
+
+    def download_pure_css(dir)
+      FileUtils.mkdir_p dir
+      Dir.chdir(dir) do
+        if File.exist?('pure.css') && days_age_of_file('pure.css') < 30
+          break false
+        end
+
+        OS.system(%w[wget -O pure.css https://cdn.jsdelivr.net/npm/purecss@latest/build/base-min.css])
+        OS.system(%w[wget -O pure-grids.css https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css])
+        OS.system(%w[wget -O reset.css https://meyerweb.com/eric/tools/css/reset/reset.css])
+        OS.system('ls -hal')
+        true
+      end # Dir
+    end # def
+
   end # class
 end # class
 
@@ -214,6 +237,11 @@ when '-h', '--help', 'help'
   puts "#{prog} build  settings - build/settings.json"
   puts "#{prog} build  [file FILEPATH]"
   puts "#{prog} upload [file FILEPATH]"
+  puts "#{prog} download pure.css to [DIR]"
+
+when /download pure.css to (.+)/
+  dir = Regexp.last_match(1)
+  warn '--- No need to update: pure.css' unless FILES.download_pure_css(dir)
 
 when 'build settings'
   Dir.chdir(BUILD_DIR) do
