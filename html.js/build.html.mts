@@ -13,6 +13,40 @@ import { html as html_escape } from './Escape.mts';
 
 type BChild = string | BElement
 
+class Page_List {
+  list: Page[];
+
+  constructor() {
+    this.list = [];
+  }
+
+  new() {
+    this.list.push(new Page());
+  }
+
+  current() {
+    let c = this.list.at(this.list.length - 1);
+    if (!c)
+      throw new Error('No current page found.');
+    return c;
+  }
+
+  pop() {
+    return this.list.pop();
+  }
+} // class
+
+class Page {
+  elements: BElement[];
+
+  constructor() { this.elements = []; }
+
+  to_html() {
+    return this.elements.map(x => x.to_html()).join('');
+  }
+} // class Page
+
+
 class BElement {
   tagname: string;
   class_list: string[] | null;
@@ -84,15 +118,15 @@ interface HTMLDataSet {
   data: {[key: string]: string | number}
 }
 
+const PAGES = new Page_List();
+
 /*
   * e('input', {name: "_something"}, "My Text")
-  * e('a.red#ID', {href: "https://some.url"}, "My Text")
   * e('div', e('span', "My Text"))
-  * e('div#main', e('span', "My Text"))
-  * e('div#main',
+  * e('div', '#main', () => {
   *   e('span', "My Text"),
   *   e('div', "My Text")
-  * )
+  * })
 */
 export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | HTMLDataSet | Partial<HTMLElementTagNameMap[T]>)[]) {
   const eles: BChild[] = [];
@@ -119,6 +153,31 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
   return new BElement(tag_name, id_class, attrs || {}, eles );
 } // export function
 
+
+// html5(
+//   e('html', {lang: 'en'}, () -> {
+//     e('head', e('title'))
+//     e('body')
+//   })
+// )
+export function html5(ele_func: (e: typeof element) => void) {
+  PAGES.new();
+  ele_func(element);
+  const p = PAGES.pop();
+  if (!p)
+    return '';
+  const html = p.to_html();
+  return(`<!DOCTYPE html><html lang="en">${html}</html>`);
+} // func
+
+export function to_html(x: BChild) {
+  if (typeof x === 'string')
+    return html_escape(x);
+  else
+    return x.to_html();
+}
+
+
 // export function fragment(...eles: (string | Element)[]) {
 //   let dom_fragment = document.createDocumentFragment();
 //   for (const x of eles) {
@@ -135,63 +194,3 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
 //   document.body.append(fragment(...eles));
 //   return document.body;
 // }
-
-
-// html5(
-//   e('html', {lang: 'en'},
-//     e('head',
-//       e('title')
-//     ),
-//     e('body', )
-//   )
-// )
-export function html5(...eles: BChild[]) {
-    return `<!DOCTYPE html><html lang="en">\n${eles.map(e => to_html(e)).join('')}</html>`;
-} // func
-
-export function to_html(x: BChild) {
-  if (typeof x === 'string')
-    return html_escape(x);
-  else
-    return x.to_html();
-}
-
-//
-// function set_attrs(ele: Element, attrs: Attributes) {
-//   for (const k in attrs) {
-//     switch (k) {
-//       case 'htmlFor':
-//         ele.setAttribute('for', attrs[k]);
-//         break;
-//       case 'href':
-//         try {
-//           ele.setAttribute(k, (new URL(attrs['href'])).toString());
-//         } catch (e) {
-//           console.warn("Invalid url.")
-//         }
-//         break;
-//       default:
-//         ele.setAttribute(k, attrs[k]);
-//
-//     } // switch
-//   }
-//   return ele;
-// }
-
-// export class Static {
-//   name: string;
-//   constructor(raw_name: string) {
-//     this.name = raw_name;
-//   }
-//
-//   get index_mjs() { return  static_url(`/section/${this.name}/index.mjs`) ; }
-//   get index_html() { return  static_url(`/section/${this.name}/index.html`) ; }
-//   get index_css() { return  static_url(`/section/${this.name}/index.css`); }
-//
-//   // static fetch(sPath: string) {
-//   //   const fin = static_url(c, sPath);
-//   //   console.log(`-- Fetching: ${fin}`)
-//   //   return fetch( fin );
-//   // }
-// } // class
-
