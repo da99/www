@@ -8,29 +8,12 @@ export type Attributes = Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameM
 //   htmlFor: string,
 //   href: string
 // }
-export const VALID_PROTO = /^(http|https|ssh|ftp|sftp|gopher):\/\//i;
-export const ObjectPrototype = Object.getPrototypeOf({});
 
 export const SPLIT_TAG_NAME_VALID_PATTERN = /^([a-z0-9]+)([\.\#][a-z0-9\_]+)*$/
 export const SPLIT_TAG_NAME_PATTERN = /([\.\#])/g
 
 export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_\-]+)+$/
 export const SPLIT_ID_CLASS_PATTERN = /([\.\#])/g
-
-export const EMAIL_PATTERN = /^[^@\.][^@]+@[^@\.]+\.[^@]+[^\.]$/;
-
-export function is_email_valid(x: string) { return !!x.match(EMAIL_PATTERN); }
-
-export function is_func(x: unknown) { return typeof x === "function"; }
-
-export function is_plain_object(x: unknown) { return typeof x === 'object' && Object.getPrototypeOf(x) === ObjectPrototype; }
-
-export function is_urlish(x: unknown) {
-  if (typeof x !== 'string')
-    return false;
-
-  return VALID_PROTO.test(x.toLowerCase());
-} // func
 
 export function is_void_tagname(x: string) {
     switch (x) {

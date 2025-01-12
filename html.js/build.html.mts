@@ -5,32 +5,13 @@
   * It is meant for builds, not server or client side rendering.
   */
 
-import type { Attributes } from './base.mts';
+import type { Attributes } from './Base.mts';
 
-import {
-  split_id_class,
-  is_plain_object,
-  is_void_tagname
-} from './base.mts';
+import { split_id_class, is_void_tagname } from './Base.mts';
+import { is_plain_object } from './IS.mts';
+import { html as html_escape } from './Escape.mts';
 
 type BChild = string | BElement
-
-const ESCAPE = {
-  HTML_CHARS_REGEX: /[&<>"']/g,
-  HTML_MAP: {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  },
-  html: function(raw_string: string) {
-    return raw_string.replace(ESCAPE.HTML_CHARS_REGEX, ESCAPE.html_char)
-  },
-  html_char: function (key: string) {
-    return ESCAPE.HTML_MAP[key];
-  },
-};
 
 class BElement {
   tagname: string;
@@ -58,7 +39,7 @@ class BElement {
 
     if (class_list)
       if (class_list.length > 0) {
-        html += ` class="${class_list.map(x => ESCAPE.html(x)).join(' ')}"`;
+        html += ` class="${class_list.map(x => html_escape(x)).join(' ')}"`;
       }
 
     for (const k in this.attrs) {
@@ -68,7 +49,18 @@ class BElement {
           new_k = 'for';
         break;
       }
-      html += ` ${new_k}="${ESCAPE.html(this.attrs[k as keyof Attributes])}"`
+
+      const attr_v = this.attrs[k as keyof Attributes];
+      switch (typeof attr_v) {
+        case 'string':
+          html += ` ${new_k}="${html_escape(attr_v)}"`
+        break;
+        case 'number':
+          html += ` ${new_k}="${html_escape(attr_v.toString())}"`
+          break;
+        default:
+          throw new Error(`Unknown attribute value type to escape: ${attr_v} -> ${typeof attr_v}`)
+      }
     } // for
 
     html += '>';
@@ -78,7 +70,7 @@ class BElement {
 
     for (const c of this.childs) {
       if (typeof c === 'string')
-        html += ESCAPE.html(c);
+        html += html_escape(c);
       else
         html += c.to_html();
     }
@@ -159,7 +151,7 @@ export function html5(...eles: BChild[]) {
 
 export function to_html(x: BChild) {
   if (typeof x === 'string')
-    return ESCAPE.html(x);
+    return html_escape(x);
   else
     return x.to_html();
 }
