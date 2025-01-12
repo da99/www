@@ -8,7 +8,7 @@
 import type { Attributes } from './Base.mts';
 
 import { split_id_class, is_void_tagname } from './Base.mts';
-import { is_plain_object } from './IS.mts';
+import { is_plain_object, is_func } from './IS.mts';
 import { html as html_escape } from './Escape.mts';
 
 type BChild = string | BElement
@@ -128,18 +128,24 @@ const PAGES = new Page_List();
   *   e('div', "My Text")
   * })
 */
-export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | HTMLDataSet | Partial<HTMLElementTagNameMap[T]>)[]) {
+export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | (() => void) | Partial<HTMLElementTagNameMap[T]>)[]) {
   const eles: BChild[] = [];
   let attrs = undefined;
   let id_class: string = '';
   for (let i = 0; i < pieces.length; i++) {
     const x = pieces[i];
+
     if (typeof x === "string") {
-      if (i == 0 && (x.at(0) == '#' || x.at(0) == '.')) {
+      if (i == 0 && ((x as string).at(0) == '#' || (x as string).at(0) == '.')) {
         id_class = x;
         continue;
       }
       eles.push(x);
+      continue;
+    }
+
+    if (is_func(x)) {
+      (x as () => void)();
       continue;
     }
 
@@ -148,7 +154,8 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
       continue;
     }
 
-    eles.push(x as BElement);
+    eles.push(x as BChild);
+
   }
   return new BElement(tag_name, id_class, attrs || {}, eles );
 } // export function
