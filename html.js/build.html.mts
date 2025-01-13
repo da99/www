@@ -118,6 +118,8 @@ interface HTMLDataSet {
   data: {[key: string]: string | number}
 }
 
+export type HTMLAttrs<T extends keyof HTMLElementTagNameMap> = Partial<HTMLElementTagNameMap[T] & HTMLDataSet>;
+
 const PAGES = new Page_List();
 
 /*
@@ -128,9 +130,9 @@ const PAGES = new Page_List();
   *   e('div', "My Text")
   * })
 */
-export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | (() => void) | Partial<HTMLElementTagNameMap[T]>)[]) {
+export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | (() => void) | HTMLAttrs<T>)[]) {
   const eles: BChild[] = [];
-  let attrs = undefined;
+  let attrs: HTMLAttrs<T> = {};
   let id_class: string = '';
   for (let i = 0; i < pieces.length; i++) {
     const x = pieces[i];
@@ -150,7 +152,7 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
     }
 
     if (is_plain_object(x)) {
-      attrs = x as Partial<HTMLElementTagNameMap[T]>;
+      attrs = x as HTMLAttrs<T>;
       continue;
     }
 
