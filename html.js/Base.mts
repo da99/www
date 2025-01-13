@@ -2,7 +2,11 @@
 /* This is also used for CSRF protection. */
 export const X_SENT_FROM = "X_SENT_FROM";
 
-export type Attributes = Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>;
+export interface HTMLDataSet {
+  data: {[key: string]: string | number}
+}
+
+export type HTMLAttrs<T extends keyof HTMLElementTagNameMap> = Partial<HTMLElementTagNameMap[T] & HTMLDataSet>;
 // export type Attributes = Partial<HTMLAttributes>
 // export interface Attributes {
 //   htmlFor: string,

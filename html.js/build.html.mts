@@ -5,13 +5,13 @@
   * It is meant for builds, not server or client side rendering.
   */
 
-import type { Attributes } from './Base.mts';
+import type { HTMLAttrs } from './Base.mts';
 
 import { split_id_class, is_void_tagname } from './Base.mts';
 import { is_plain_object, is_func } from './IS.mts';
 import { html as html_escape } from './Escape.mts';
 
-type BChild = string | BElement
+type BChild = string | BElement<keyof HTMLElementTagNameMap>
 
 class Page_List {
   list: Page[];
@@ -74,14 +74,14 @@ class Page {
 } // class Page
 
 
-class BElement {
+class BElement<T extends keyof HTMLElementTagNameMap> {
   tagname: string;
   class_list: string[] | null;
-  attrs: Attributes;
+  attrs: HTMLAttrs<T>;
   tagid: undefined | string;
   childs: BChild[];
 
-  constructor(tag_name: keyof HTMLElementTagNameMap, raw_id_class: string, raw_attrs: Partial<HTMLElementTagNameMap[keyof HTMLElementTagNameMap]>, eles: BChild[]) {
+  constructor(tag_name: keyof HTMLElementTagNameMap, raw_id_class: string, raw_attrs: HTMLAttrs<T>, eles: BChild[]) {
     const { class_list, tag_id } = split_id_class(tag_name, raw_id_class);
     this.tagname = tag_name;
     this.class_list = class_list;
@@ -103,7 +103,7 @@ class BElement {
         html += ` class="${class_list.map(x => html_escape(x)).join(' ')}"`;
       }
 
-    for (const k in this.attrs) {
+    for (const [k,attr_v] of Object.entries(this.attrs)) {
       let new_k = k;
       switch (k.toLowerCase()) {
         case 'htmlfor':
@@ -111,7 +111,7 @@ class BElement {
         break;
       }
 
-      const attr_v = this.attrs[k as keyof Attributes];
+      // const attr_v = this.attrs[k as keyof HTMLAttrs<T>];
       switch (typeof attr_v) {
         case 'string':
           html += ` ${new_k}="${html_escape(attr_v)}"`
@@ -148,12 +148,6 @@ class BElement {
     return html;
   }
 } // BElement
-
-interface HTMLDataSet {
-  data: {[key: string]: string | number}
-}
-
-export type HTMLAttrs<T extends keyof HTMLElementTagNameMap> = Partial<HTMLElementTagNameMap[T] & HTMLDataSet>;
 
 const PAGES = new Page_List();
 
@@ -194,12 +188,11 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
       continue;
     }
 
-    p.push(x as BElement);
+    p.push(x as BElement<keyof HTMLElementTagNameMap>);
 
   } // for
 
-  const new_e = new BElement(tag_name, id_class, attrs || {}, p.get_childs() );
-  console.log(`${tag_name} : ${new_e.childs.length}`)
+  const new_e = new BElement(tag_name, id_class, attrs || {}, p.get_childs() || []);
   p.push(new_e)
   return new_e;
 } // export function
