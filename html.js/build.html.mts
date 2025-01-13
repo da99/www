@@ -37,12 +37,39 @@ class Page_List {
 } // class
 
 class Page {
-  elements: BElement[];
+  elements: BChild[];
+  childs: Array<BChild[]>;
 
-  constructor() { this.elements = []; }
+  constructor() {
+    this.elements = [];
+    this.childs = [];
+  }
+
+  push(e: BChild) {
+    if (this.childs.length > 0)
+      this.childs[this.childs.length - 1].push(e);
+    else {
+      if (typeof e !== 'string')
+        this.elements.push(e);
+      else
+        throw new Error(`String not allowed in elements list: ${e}`)
+    }
+    return this;
+  }
+
+  collect_childs() {
+    this.childs.push([]);
+    return this;
+  }
+
+  get_childs() {
+    if (this.childs.length < 1)
+      return [];
+    return this.childs.pop();
+  }
 
   to_html() {
-    return this.elements.map(x => x.to_html()).join('');
+    return this.elements.map(x => typeof x !== 'string' && x.to_html()).join('');
   }
 } // class Page
 
@@ -92,6 +119,14 @@ class BElement {
         case 'number':
           html += ` ${new_k}="${html_escape(attr_v.toString())}"`
           break;
+        case 'object':
+          if (k !== 'data')
+            throw new Error(`Unknown attribute value type to escape: ${attr_v} -> ${typeof attr_v}`)
+          for (const [k,v] of Object.entries(attr_v as Object)) {
+            html += ` data-${k}="${html_escape(v.toString())}"`
+          }
+          break;
+
         default:
           throw new Error(`Unknown attribute value type to escape: ${attr_v} -> ${typeof attr_v}`)
       }
@@ -131,9 +166,11 @@ const PAGES = new Page_List();
   * })
 */
 export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...pieces : (BChild | (() => void) | HTMLAttrs<T>)[]) {
-  const eles: BChild[] = [];
   let attrs: HTMLAttrs<T> = {};
   let id_class: string = '';
+  const p = PAGES.current();
+  p.collect_childs();
+
   for (let i = 0; i < pieces.length; i++) {
     const x = pieces[i];
 
@@ -142,7 +179,8 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
         id_class = x;
         continue;
       }
-      eles.push(x);
+
+      p.push(x);
       continue;
     }
 
@@ -156,10 +194,14 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
       continue;
     }
 
-    eles.push(x as BChild);
+    p.push(x as BElement);
 
-  }
-  return new BElement(tag_name, id_class, attrs || {}, eles );
+  } // for
+
+  const new_e = new BElement(tag_name, id_class, attrs || {}, p.get_childs() );
+  console.log(`${tag_name} : ${new_e.childs.length}`)
+  p.push(new_e)
+  return new_e;
 } // export function
 
 
@@ -175,8 +217,7 @@ export function html5(ele_func: (e: typeof element) => void) {
   const p = PAGES.pop();
   if (!p)
     return '';
-  const html = p.to_html();
-  return(`<!DOCTYPE html><html lang="en">${html}</html>`);
+  return(`<!DOCTYPE html><html lang="en">${p.to_html()}</html>`);
 } // func
 
 export function to_html(x: BChild) {
