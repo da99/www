@@ -3,6 +3,8 @@
 import { is_plain_object } from './IS.mts';
 import { SPLIT_TAG_NAME_PATTERN } from './Base.mts';
 
+import type { HTMLAttrs } from './Base.mts';
+
 export const Response_States = ['ok', 'invalid', 'try_again', 'not_yet', 'expired'] as const;
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
 export const CSS_States = [...Response_States, ...Event_States] as const;
@@ -109,7 +111,7 @@ export function split_id_class(e: Element, id_class: string): Element {
   *   e('div', "My Text")
   * )
 */
-export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...body: (string | Partial<HTMLElementTagNameMap[T]> | Element)[]) {
+export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...body: (string | HTMLAttrs<T> | Element)[]) {
   const e = document.createElement(tag_name)
   for (let i = 0; i < body.length; i++ ){
     const v = body[i];
@@ -123,7 +125,7 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...b
     }
 
     if (is_plain_object(v)) {
-      set_attrs(e, v);
+      __set_attrs(e, v);
       continue;
     }
 
@@ -133,7 +135,7 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...b
   return e;
 } // export function
 
-function set_attrs(ele: Element, attrs: any) {
+function __set_attrs(ele: Element, attrs: any) {
   for (const k in attrs) {
     switch (k) {
       case 'htmlFor':
