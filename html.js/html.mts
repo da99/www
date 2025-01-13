@@ -1,4 +1,8 @@
 
+
+import { is_plain_object } from './IS.mts';
+import { SPLIT_TAG_NAME_PATTERN } from './Base.mts';
+
 export const Response_States = ['ok', 'invalid', 'try_again', 'not_yet', 'expired'] as const;
 export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
 export const CSS_States = [...Response_States, ...Event_States] as const;
@@ -19,7 +23,7 @@ export interface Network_Error_Origin {
 }
 
 export interface Request_Origin {
-  readonly request: FetchRequestInit,
+  readonly request: RequestInit,
   readonly dom_id: string,
   do_request: boolean
 }
@@ -37,9 +41,7 @@ export interface Response_Detail {
 }
 
 const THE_BODY = document.body;
-export const IS_DEV = window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('://the-stage.') > 0;
-
-import { is_plain_object, SPLIT_TAG_NAME_PATTERN } from './base.mts';
+export const IS_DEV = window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('.stream') > 0;
 
 export function log(...args: any[]) {
   if (!IS_DEV)
@@ -586,7 +588,7 @@ export const http = {
     if (action.length < 2)
       throw new Error(`action attribute not set for ${dom_id}`);
 
-    const fetch_data: FetchRequestInit = {
+    const fetch_data: RequestInit = {
       method,
       referrerPolicy: "no-referrer",
       cache: "no-cache",
