@@ -1,63 +1,16 @@
 
 
 import { is_plain_object } from './IS.mts';
-import { SPLIT_TAG_NAME_PATTERN } from './Base.mts';
+import { SPLIT_TAG_NAME_PATTERN, split_id_class } from './Base.mts';
 
 import type { HTMLAttrs } from './Base.mts';
 
-export const Response_States = ['ok', 'invalid', 'try_again', 'not_yet', 'expired'] as const;
-export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
-export const CSS_States = [...Response_States, ...Event_States] as const;
-
-export type Response_Handler = (resp: Response_Origin, req: Request_Origin) => void;
 
 export interface Fields_State {
   [index: string]: string
 }
 
-export interface Custom_Event_Detail<T> extends Event {
-  detail: T
-}
-
-export interface Network_Error_Origin {
-  error: any,
-  request: Request_Origin
-}
-
-export interface Request_Origin {
-  readonly request: RequestInit,
-  readonly dom_id: string,
-  do_request: boolean
-}
-
-export interface Response_Origin {
-  readonly status: typeof Response_States[number],
-  readonly data: {
-    [index: string]: string
-  }
-}
-
-export interface Response_Detail {
-  request: Request_Origin,
-  response: Response_Origin,
-}
-
 const THE_BODY = document.body;
-export const IS_DEV = window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('.stream') > 0;
-
-export function log(...args: any[]) {
-  if (!IS_DEV)
-    return false;
-
-  return console.log(...args);
-}
-
-export function warn(...args: any[]) {
-  if (!IS_DEV)
-    return false;
-
-  return console.warn(...args);
-}
 
 export function fragment(...eles: (string | Element)[]) {
   let dom_fragment = document.createDocumentFragment();
@@ -76,30 +29,6 @@ export function body(...eles: (string | Element)[]) {
   return THE_BODY;
 }
 
-export function split_id_class(e: Element, id_class: string): Element {
-  let curr = '';
-  for (const s of id_class.split(SPLIT_TAG_NAME_PATTERN) ) {
-    switch (s) {
-      case '.':
-      case '#':
-        curr = s;
-        break;
-      case '':
-        // ignore
-        break;
-      default:
-        switch (curr) {
-        case '.':
-          e?.classList.add(s);
-        break;
-        case '#':
-          e?.setAttribute('id', s);
-        break;
-      }
-    }
-  }
-  return e;
-} // func
 
 /*
   * e('input', {name: "_something"}, "My Text")
@@ -626,71 +555,4 @@ export const http = {
   }
 }; // export const
 
-export const on = {
-
-  submit(selector: string, f: (data: any) => void)  {
-    THE_BODY.addEventListener(`${selector} submit`, function (ev: Event) {
-      const cev = ev as Custom_Event_Detail<Request_Origin>;
-      f(cev.detail);
-    });
-  },
-
-  request(selector: string, f: (req: Request_Origin) => void) {
-    THE_BODY.addEventListener(`${selector} request`, function (ev: Event) {
-      const cev = ev as Custom_Event_Detail<Request_Origin>;
-      const req = cev.detail;
-      f(req);
-    });
-  },
-
-  network_error(selector: string, f: (req: Request_Origin, err: any) => void) {
-    THE_BODY.addEventListener(`${selector} network_error`, (ev: Event) => {
-      const cev = ev as Custom_Event_Detail<Network_Error_Origin>;
-      f(cev.detail.error, cev.detail.request);
-    });
-  },
-
-  server_error(selector: string, f: Response_Handler) {
-    THE_BODY.addEventListener(`${selector} server_error`, (ev: Event) => {
-      const cev = ev as Custom_Event_Detail<Response_Detail>;
-      f(cev.detail.response, cev.detail.request);
-    });
-  },
-
-  response(selector: string, f: Response_Handler) {
-    THE_BODY.addEventListener(`${selector} response`, function (ev: Event) {
-      const cev = ev as Custom_Event_Detail<Response_Detail>
-      const resp = cev.detail.response;
-      const req = cev.detail.request;
-      f(resp, req);
-    });
-  },
-
-  ok(selector: string, f: Response_Handler) { return on.status('ok', selector, f); },
-  invalid(selector: string, f: Response_Handler) { return on.status('invalid', selector, f); },
-  try_again(selector: string, f: Response_Handler) { return on.status('try_again', selector, f); },
-  not_yet(selector: string, f: Response_Handler) { return on.status('not_yet', selector, f); },
-  expired(selector: string, f: Response_Handler) { return on.status('expired', selector, f); },
-
-  status(s: typeof CSS_States[number], selector: string, f: Response_Handler) {
-    return THE_BODY.addEventListener(`${selector} ${s}`, (ev: Event) => {
-      const cev = ev as Custom_Event_Detail<Response_Detail>;
-      f(cev.detail.response, cev.detail.request);
-    });
-  },
-
-  by_id: {
-    click(id: string, f: (ev: Event) => void) {
-      THE_BODY.addEventListener('click', function (ev: Event) {
-        const target = ev.target;
-        if (target) {
-          const e = target as Element;
-          if (e.id === id)
-            f(ev);
-        }
-      });
-    }
-  }
-
-}; // export on
 

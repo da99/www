@@ -40,9 +40,9 @@ export function is_void_tagname(x: string) {
     return false;
 } // func
 
-export function split_id_class<T extends keyof HTMLElementTagNameMap>(tag_name: T, new_class: string) {
+export function split_id_class(new_class: string) {
   if (new_class == '')
-    return {tag_name, tag_id: null, class_list: []};
+    return {tag_id: null, class_list: []};
 
   if (!new_class.match(SPLIT_ID_CLASS_VALID_PATTERN)) {
     throw new Error(`Invalid characters in id/class: ${new_class}`);
@@ -72,6 +72,30 @@ export function split_id_class<T extends keyof HTMLElementTagNameMap>(tag_name: 
     }
   }
 
-  return {tag_name, tag_id, class_list};
+  return {tag_id, class_list};
 } // func
 
+export function e_split_id_class(e: Element, id_class: string): Element {
+  let curr = '';
+  for (const s of id_class.split(SPLIT_TAG_NAME_PATTERN) ) {
+    switch (s) {
+      case '.':
+      case '#':
+        curr = s;
+        break;
+      case '':
+        // ignore
+        break;
+      default:
+        switch (curr) {
+        case '.':
+          e?.classList.add(s);
+        break;
+        case '#':
+          e?.setAttribute('id', s);
+        break;
+      }
+    }
+  }
+  return e;
+} // func
