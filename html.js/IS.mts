@@ -66,3 +66,6 @@ export function is_empty(x: Record<string, any> | { length: number }) {
   return (x as { length: number }).length === 0;
 }
 
+export function is_enumerable(v: unknown) {
+  return is_string(v) || is_array(v) || is_plain_object(v) ;
+}

@@ -9,15 +9,6 @@ function console_log() {
   return console.log.apply(console, arguments);
 };
 
-function keys(v) {
-  let arr = [];
-  for (let x in v) {
-    if (v.hasOwnProperty(x))
-      arr.push(x);
-  }
-  return arr;
-}
-
 function is_dev() {
   if (typeof process !== 'undefined' && (process.env.IS_DEVELOPMENT || process.env.IS_DEV)) {
     return true;
@@ -31,11 +22,6 @@ function is_dev() {
     ;
   }
   return false;
-}
-
-
-export function is_enumerable(v) {
-  return is_string(v) || is_array(v) || is_plain_object(v) ;
 }
 
 function inspect(arg) {
@@ -104,25 +90,6 @@ function own_property(string raw_name, v) {
   return v[name];
 } // === func own_property
 
-function return_arguments(...args) { return arguments; }
-function to_arguments() { return arguments; }
-
-function to_array(val) {
-  if (!is_array(val) && val.constructor != arguments.constructor)
-    throw new Error("Invalid value for to_array: " + to_string(val));
-
-  var arr = [];
-  int len = val.length;
-  for (int i = 0; i < len; i++) {
-    arr.push(val[i]);
-  }
-  return arr;
-} // === func
-
-// Removes begining slash, if any.
-function to_var_name(string val) {
-  return to_var_name(val, "_");
-}
 
 function to_var_name(string val, string delim) {
   return val.replace(/^[\/]+/, "").replace(/[^a-zA-Z-0-9\_\-]+/g, delim);
