@@ -1,16 +1,14 @@
 
-export const IS_DEV = window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('.stream') > 0;
+import { IS_WINDOW, IS_DEV } from './IS.mts'
 
 export function log(...args: any[]) {
-  if (!IS_DEV)
-    return false;
-
-  return console.log(...args);
+  if (!IS_WINDOW || IS_DEV)
+    return console.log(...args);
+  return false;
 }
 
 export function warn(...args: any[]) {
-  if (!IS_DEV)
-    return false;
-
-  return console.warn(...args);
+  if (!IS_WINDOW || IS_DEV)
+    return console.warn(...args);
+  return false;
 }

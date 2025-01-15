@@ -1,4 +1,7 @@
 
+export const IS_WINDOW = typeof window !== 'undefined'
+export const IS_DEV = IS_WINDOW && window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('.stream') > 0;
+
 export const EMAIL_PATTERN = /^[^@\.][^@]+@[^@\.]+\.[^@]+[^\.]$/;
 export function is_email_valid(x: string) { return !!x.match(EMAIL_PATTERN); }
 
@@ -76,4 +79,23 @@ export function is_empty(x: Record<string, any> | { length: number }) {
 
 export function is_enumerable(v: unknown) {
   return is_string(v) || is_array(v) || is_plain_object(v) ;
+}
+
+  // void is_whitespace_specs() {
+  //   should_eq(true, bool () { return is_whitespace("   "); });
+  //   should_eq(false,bool () { return is_whitespace("");    });
+  // }
+export function is_whitespace(v: string): boolean {
+  if (v.length > 0 && v.trim().length == 0)
+    return true;
+  return false;
+}
+
+  // void standard_name_specs() {
+  //   should_eq("name name", string () { return standard_name('NAME NAME'); });  // it 'lowercases names'
+  //   should_eq("name",      string () { return standard_name('  name  '); });   // it 'trims string'
+  //   should_eq("n ame",     string () { return standard_name('n   aME');  });   // it 'squeezes whitespace'
+  // }
+export function standard_name(raw: string) {
+  return(raw.replace(/[\s\uFEFF\xA0]+/g, ' ').trim()).toLowerCase();
 }
