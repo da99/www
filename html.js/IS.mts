@@ -34,6 +34,14 @@ export function is_num(x: unknown): x is number {
   return typeof x === 'number' && !isNaN(x);
 }
 
+export function is_dev() {
+  if (typeof window === 'undefined')
+    return false;
+
+  var addr = window.location.href;
+  return window.console && (addr.indexOf("localhost") > 0 || addr.indexOf("127.0.0.1") > 0);
+}
+
 export function is_boolean(x: unknown): x is boolean {
   return typeof x === 'boolean';
 }
