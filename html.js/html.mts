@@ -1,9 +1,9 @@
 
 
 import { is_plain_object } from './IS.mts';
-import { SPLIT_TAG_NAME_PATTERN, split_id_class } from './Base.mts';
+import { SPLIT_TAG_NAME_PATTERN, split_id_class } from './dom.mts';
 
-import type { HTMLAttrs } from './Base.mts';
+import type { HTMLAttrs } from './dom.mts';
 
 
 export interface Fields_State {

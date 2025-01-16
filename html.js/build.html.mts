@@ -5,9 +5,9 @@
   * It is meant for builds, not server or client side rendering.
   */
 
-import type { HTMLAttrs } from './Base.mts';
+import type { HTMLAttrs } from './dom.mts';
 
-import { split_id_class, is_void_tagname } from './Base.mts';
+import { split_id_class, is_void_tagname } from './dom.mts';
 import { is_plain_object, is_func } from './IS.mts';
 import { html as html_escape } from './Escape.mts';
 
