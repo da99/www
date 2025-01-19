@@ -101,8 +101,9 @@ export function body(...eles: (string | Element)[]) {
 export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...body: (string | HTMLAttrs<T> | ((f: typeof element) => void))[]) {
   const e = document.createElement(tag_name)
 
-  for (let i = 0; i < body.length; i++ ){
-    const v = body[i];
+  let i = -1;
+  for (const v of body){
+    i++;
 
     if (is_plain_object(v)) {
       __set_attrs(e, v);
