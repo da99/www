@@ -14,7 +14,7 @@ export function html(raw_string: string) {
 }
 
 export function html_char(key: string) {
-  return HTML_MAP[key];
+  return HTML_MAP[key as keyof typeof HTML_MAP] || '';
 }
 
 

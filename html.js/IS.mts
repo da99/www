@@ -1,6 +1,6 @@
 
-export const IS_WINDOW = typeof window !== 'undefined'
-export const IS_DEV = IS_WINDOW && window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('.stream') > 0;
+export const IS_WINDOW = typeof window === 'object'
+export const IS_DEV = IS_WINDOW && (window.location.href.indexOf('://localhost:') > 0 || window.location.href.indexOf('.stream') > 0);
 
 export const EMAIL_PATTERN = /^[^@\.][^@]+@[^@\.]+\.[^@]+[^\.]$/;
 export function is_email_valid(x: string) { return !!x.match(EMAIL_PATTERN); }
