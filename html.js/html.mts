@@ -55,12 +55,12 @@ export function element_str<T extends keyof HTMLElementTagNameMap>(tag_name: T, 
       }
 
       throw new Error(`Unknown string: ${v}`);
-    }
+    } // if string
 
     if (is_plain_object(v)) {
       for (const attr_k in v) {
         const attr_v = (v as HTMLAttrs<T>)[attr_k as keyof HTMLAttrs<T>];
-        process.stdout.write(` ${attr_k}="${attr_v}"`)
+        process.stdout.write(` ${attr_k}="${html_escape(`${attr_v}`)}"`)
       }
       continue;
     }
