@@ -60,10 +60,27 @@ export function element_str<T extends keyof HTMLElementTagNameMap>(tag_name: T, 
     if (is_plain_object(v)) {
       for (const attr_k in v) {
         const attr_v = (v as HTMLAttrs<T>)[attr_k as keyof HTMLAttrs<T>];
-        process.stdout.write(` ${attr_k}="${html_escape(`${attr_v}`)}"`)
-      }
+        const v_type = typeof attr_v;
+        if (v_type === 'boolean') {
+          if (attr_v)
+            process.stdout.write(` ${attr_k}`)
+          continue;
+        }
+
+        if (v_type === 'string' || v_type === 'number') {
+          process.stdout.write(` ${attr_k}="${html_escape(`${attr_v}`)}"`)
+          continue;
+        }
+
+        if (attr_k === 'data' && is_plain_object(attr_v)) {
+          for (const dk in attr_v) {
+            process.stdout.write(` data-${dk}="${html_escape(`${attr_v[dk]}`)}"`)
+          }
+          continue;
+        }
+      } // for attrs
       continue;
-    }
+    } // if is_plain_object / attrs
 
     if (i === last_i && typeof v === 'function') {
       if (is_void)
