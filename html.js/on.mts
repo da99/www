@@ -1,5 +1,5 @@
 
-import type { Request_Origin, Network_Error_Origin, Response_Handler, Response_Detail, CSS_States } from './fetch.mts';
+import type { Request_Origin, Network_Error_Origin, Response_Handler, Response_Detail, CSS_States } from './types.mts';
 
 
 export interface Custom_Event_Detail<T> extends Event {

@@ -1,30 +1,24 @@
-/* This is also used for CSRF protection. */
-export const X_SENT_FROM = "X_SENT_FROM";
-
-export interface HTMLDataSet {
-  data: {[key: string]: string | number}
-}
-
 // export type Attributes = Partial<HTMLAttributes>
 // export interface Attributes {
 //   htmlFor: string,
 //   href: string
 // }
 
-export type HTMLAttrs<T extends keyof HTMLElementTagNameMap> = Partial<HTMLElementTagNameMap[T] & HTMLDataSet>;
+import type { Request_Origin, Response_Origin } from './types.mts';
+import type { Attrs, ElementTagNameMap } from './types.mts';
 
+import { CSS_States } from './types.mts';
 import { is_plain_object } from './IS.mts';
+import { log, warn } from './log.mts';
 
-import type { Request_Origin, Response_Origin } from './fetch.mts';
-import type { log, warn } from './log.mts';
+/* This is also used for CSRF protection. */
+export const X_SENT_FROM = "X_SENT_FROM";
+
+const THE_BODY = document.body;
 
 export interface Fields_State {
   [index: string]: string
 }
-
-// export const SPLIT_TAG_NAME_VALID_PATTERN = /^([a-z0-9]+)([\.\#][a-z0-9\_]+)*$/
-// export const SPLIT_TAG_NAME_PATTERN = /([\.\#])/g
-// export const SPLIT_ID_CLASS_PATTERN = /([\.\#])/g
 
 export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_\-]+)+$/
 
@@ -98,7 +92,7 @@ export function body(...eles: (string | Element)[]) {
   *   e('div', "My Text")
   * )
 */
-export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...body: (string | HTMLAttrs<T> | ((f: typeof element) => void))[]) {
+export function element<T extends keyof ElementTagNameMap>(tag_name: T, ...body: (string | Attrs<T> | ((f: typeof element) => void))[]) {
   const e = document.createElement(tag_name)
 
   let i = -1;
@@ -141,7 +135,7 @@ function __set_attrs(ele: Element, attrs: any) {
         break;
       case 'href':
         try {
-          ele.setAttribute(k, (new URL((attrs as HTMLElementTagNameMap['a'])[k])).toString());
+          ele.setAttribute(k, (new URL((attrs as ElementTagNameMap['a'])[k])).toString());
         } catch (e) {
           warn("Invalid url.")
         }
@@ -191,13 +185,9 @@ export const dom = {
     }
   },
 
-  to_element(x: string | HTMLElement) {
-    if (typeof x === 'string') {
-      const ele = document.getElementById(x);
-      if (ele)
-        return ele;
-      return false;
-    }
+  to_element(x: string | HTMLElement): HTMLElement | null {
+    if (typeof x === 'string')
+      return document.getElementById(x);
     return x;
   },
 

@@ -1,5 +1,39 @@
 /// <reference no-default-lib="true"
-export interface HTMLElement  {
+
+export type Response_Handler = (resp: Response_Origin, req: Request_Origin) => void;
+export const Response_States = ['ok', 'invalid', 'try_again', 'not_yet', 'expired'] as const;
+export const Event_States = ['request', 'network_error', 'server_error', 'response', 'loading'] as const;
+export const CSS_States = [...Response_States, ...Event_States] as const;
+
+export interface Request_Origin {
+  readonly request: RequestInit,
+  readonly dom_id: string,
+  do_request: boolean
+}
+
+export interface Response_Origin {
+  readonly status: typeof Response_States[number],
+  readonly data: {
+    [index: string]: string
+  }
+}
+
+export interface Response_Detail {
+  request: Request_Origin,
+  response: Response_Origin,
+}
+
+export interface Network_Error_Origin {
+  error: any,
+  request: Request_Origin
+}
+export interface DataSet {
+  data: {[key: string]: string | number}
+}
+
+export type Attrs<T extends keyof ElementTagNameMap> = Partial<ElementTagNameMap[T] & DataSet>;
+
+export interface AttrElement  {
   classList: string[];
   id: string;
   readonly namespaceURI: string | null;
@@ -20,7 +54,7 @@ export interface HTMLElement  {
 }
 
 
-interface HTMLAnchorElement extends HTMLElement, HTMLHyperlinkElementUtils {
+interface HTMLAnchorElement extends AttrElement, HTMLHyperlinkElementUtils {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLAnchorElement/download) */
     download: string;
     /**
@@ -62,7 +96,7 @@ interface HTMLAnchorElement extends HTMLElement, HTMLHyperlinkElementUtils {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLAreaElement)
  */
-interface HTMLAreaElement extends HTMLElement, HTMLHyperlinkElementUtils {
+interface HTMLAreaElement extends AttrElement, HTMLHyperlinkElementUtils {
     /**
      * Sets or retrieves a text alternative to the graphic.
      *
@@ -113,7 +147,7 @@ interface HTMLAudioElement extends HTMLMediaElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLBRElement)
  */
-interface HTMLBRElement extends HTMLElement {
+interface HTMLBRElement extends AttrElement {
 }
 
 
@@ -122,7 +156,7 @@ interface HTMLBRElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLBaseElement)
  */
-interface HTMLBaseElement extends HTMLElement {
+interface HTMLBaseElement extends AttrElement {
     /**
      * Gets or sets the baseline URL on which relative links are based.
      *
@@ -144,7 +178,7 @@ interface HTMLBaseElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLBodyElement)
  */
-interface HTMLBodyElement extends HTMLElement {
+interface HTMLBodyElement extends AttrElement {
 }
 
 /**
@@ -152,7 +186,7 @@ interface HTMLBodyElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLButtonElement)
  */
-interface HTMLButtonElement extends HTMLElement {
+interface HTMLButtonElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLButtonElement/disabled) */
     disabled: boolean;
     /**
@@ -244,7 +278,7 @@ interface HTMLButtonElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLCanvasElement)
  */
-interface HTMLCanvasElement extends HTMLElement {
+interface HTMLCanvasElement extends AttrElement {
     /**
      * Gets or sets the height of a canvas element on a document.
      *
@@ -320,7 +354,7 @@ interface HTMLCollection extends HTMLCollectionBase {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDListElement)
  */
-interface HTMLDListElement extends HTMLElement {
+interface HTMLDListElement extends AttrElement {
 }
 
 
@@ -329,7 +363,7 @@ interface HTMLDListElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDataElement)
  */
-interface HTMLDataElement extends HTMLElement {
+interface HTMLDataElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDataElement/value) */
     value: string;
 }
@@ -340,7 +374,7 @@ interface HTMLDataElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDataListElement)
  */
-interface HTMLDataListElement extends HTMLElement {
+interface HTMLDataListElement extends AttrElement {
     /**
      * Returns an HTMLCollection of the option elements of the datalist element.
      *
@@ -350,14 +384,14 @@ interface HTMLDataListElement extends HTMLElement {
 
 
 /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDetailsElement) */
-interface HTMLDetailsElement extends HTMLElement {
+interface HTMLDetailsElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDetailsElement/open) */
     open: boolean;
 }
 
 
 /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDialogElement) */
-interface HTMLDialogElement extends HTMLElement {
+interface HTMLDialogElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDialogElement/open) */
     open: boolean;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLDialogElement/returnValue) */
@@ -381,10 +415,10 @@ interface HTMLDialogElement extends HTMLElement {
 }
 
 
-interface HTMLDivElement extends HTMLElement {
+interface HTMLDivElement extends AttrElement {
 }
 
-interface HTMLEmbedElement extends HTMLElement {
+interface HTMLEmbedElement extends AttrElement {
     /** Sets or retrieves the height of the object. */
     height: string;
     /** Sets or retrieves a URL to be loaded by the object. */
@@ -401,7 +435,7 @@ interface HTMLEmbedElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLFieldSetElement)
  */
-interface HTMLFieldSetElement extends HTMLElement {
+interface HTMLFieldSetElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLFieldSetElement/disabled) */
     disabled: boolean;
     /**
@@ -461,7 +495,7 @@ interface HTMLFieldSetElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLFormElement)
  */
-interface HTMLFormElement extends HTMLElement {
+interface HTMLFormElement extends AttrElement {
     /**
      * Sets or retrieves a list of character encodings for input data that must be accepted by the server processing the form.
      *
@@ -539,7 +573,7 @@ interface HTMLFormElement extends HTMLElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLFormElement/reportValidity) */
     reportValidity(): boolean;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLFormElement/requestSubmit) */
-    requestSubmit(submitter?: HTMLElement | null): void;
+    requestSubmit(submitter?: AttrElement | null): void;
     /**
      * Fires when the user resets a form.
      *
@@ -566,7 +600,7 @@ interface HTMLFormElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLHRElement)
  */
-interface HTMLHRElement extends HTMLElement {
+interface HTMLHRElement extends AttrElement {
 }
 
 
@@ -575,7 +609,7 @@ interface HTMLHRElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLHeadElement)
  */
-interface HTMLHeadElement extends HTMLElement {
+interface HTMLHeadElement extends AttrElement {
 }
 
 
@@ -584,7 +618,7 @@ interface HTMLHeadElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLHeadingElement)
  */
-interface HTMLHeadingElement extends HTMLElement {
+interface HTMLHeadingElement extends AttrElement {
 }
 
 /**
@@ -592,7 +626,7 @@ interface HTMLHeadingElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLHtmlElement)
  */
-interface HTMLHtmlElement extends HTMLElement {
+interface HTMLHtmlElement extends AttrElement {
 }
 
 
@@ -692,7 +726,7 @@ interface HTMLHyperlinkElementUtils {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLImageElement)
  */
-interface HTMLImageElement extends HTMLElement {
+interface HTMLImageElement extends AttrElement {
     /**
      * Sets or retrieves a text alternative to the graphic.
      *
@@ -778,7 +812,7 @@ interface HTMLImageElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLInputElement)
  */
-interface HTMLInputElement extends HTMLElement, PopoverInvokerElement {
+interface HTMLInputElement extends AttrElement, PopoverInvokerElement {
     /** Sets or retrieves a comma-separated list of content types. */
     accept: string;
     /** Sets or retrieves a text alternative to the graphic. */
@@ -991,7 +1025,7 @@ interface HTMLInputElement extends HTMLElement, PopoverInvokerElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLIElement)
  */
-interface HTMLLIElement extends HTMLElement {
+interface HTMLLIElement extends AttrElement {
     /** Sets or retrieves the value of a list item. */
     value: number;
 }
@@ -1001,13 +1035,13 @@ interface HTMLLIElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLabelElement)
  */
-interface HTMLLabelElement extends HTMLElement {
+interface HTMLLabelElement extends AttrElement {
     /**
      * Returns the form control that is associated with this element.
      *
      * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLabelElement/control)
      */
-    readonly control: HTMLElement | null;
+    readonly control: AttrElement | null;
     /**
      * Retrieves a reference to the form that the object is embedded in.
      *
@@ -1027,7 +1061,7 @@ interface HTMLLabelElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLegendElement)
  */
-interface HTMLLegendElement extends HTMLElement {
+interface HTMLLegendElement extends AttrElement {
     readonly form: HTMLFormElement | null;
 }
 
@@ -1036,7 +1070,7 @@ interface HTMLLegendElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLinkElement)
  */
-interface HTMLLinkElement extends HTMLElement, LinkStyle {
+interface HTMLLinkElement extends AttrElement, LinkStyle {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLinkElement/as) */
     as: string;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLLinkElement/crossOrigin) */
@@ -1073,7 +1107,7 @@ interface HTMLLinkElement extends HTMLElement, LinkStyle {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMapElement)
  */
-interface HTMLMapElement extends HTMLElement {
+interface HTMLMapElement extends AttrElement {
     /**
      * Retrieves a collection of the area objects defined for the given map object.
      *
@@ -1096,7 +1130,7 @@ interface HTMLMapElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMediaElement)
  */
-interface HTMLMediaElement extends HTMLElement {
+interface HTMLMediaElement extends AttrElement {
     /**
      * Gets or sets a value that indicates whether to start playing the media automatically.
      *
@@ -1288,7 +1322,7 @@ interface HTMLMediaElement extends HTMLElement {
 }
 
 /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMenuElement) */
-interface HTMLMenuElement extends HTMLElement {
+interface HTMLMenuElement extends AttrElement {
 }
 
 
@@ -1297,7 +1331,7 @@ interface HTMLMenuElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMetaElement)
  */
-interface HTMLMetaElement extends HTMLElement {
+interface HTMLMetaElement extends AttrElement {
     /** Gets or sets meta-information to associate with httpEquiv or name. */
     content: string;
     /** Gets or sets information used to bind the value of a content attribute of a meta element to an HTTP response header. */
@@ -1313,7 +1347,7 @@ interface HTMLMetaElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMeterElement)
  */
-interface HTMLMeterElement extends HTMLElement {
+interface HTMLMeterElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMeterElement/high) */
     high: number;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLMeterElement/low) */
@@ -1334,7 +1368,7 @@ interface HTMLMeterElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLModElement)
  */
-interface HTMLModElement extends HTMLElement {
+interface HTMLModElement extends AttrElement {
     /**
      * Sets or retrieves reference information about the object.
      *
@@ -1355,7 +1389,7 @@ interface HTMLModElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOListElement)
  */
-interface HTMLOListElement extends HTMLElement {
+interface HTMLOListElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOListElement/reversed) */
     reversed: boolean;
     /**
@@ -1374,7 +1408,7 @@ interface HTMLOListElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLObjectElement)
  */
-interface HTMLObjectElement extends HTMLElement {
+interface HTMLObjectElement extends AttrElement {
     /**
      * Retrieves the document object of the page or frame.
      *
@@ -1468,7 +1502,7 @@ interface HTMLObjectElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOptGroupElement)
  */
-interface HTMLOptGroupElement extends HTMLElement {
+interface HTMLOptGroupElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOptGroupElement/disabled) */
     disabled: boolean;
     /**
@@ -1485,7 +1519,7 @@ interface HTMLOptGroupElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOptionElement)
  */
-interface HTMLOptionElement extends HTMLElement {
+interface HTMLOptionElement extends AttrElement {
     /**
      * Sets or retrieves the status of an option.
      *
@@ -1552,7 +1586,7 @@ interface HTMLOrSVGElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOutputElement)
  */
-interface HTMLOutputElement extends HTMLElement {
+interface HTMLOutputElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOutputElement/defaultValue) */
     defaultValue: string;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLOutputElement/form) */
@@ -1595,7 +1629,7 @@ interface HTMLOutputElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLParagraphElement)
  */
-interface HTMLParagraphElement extends HTMLElement {
+interface HTMLParagraphElement extends AttrElement {
 }
 
 
@@ -1604,7 +1638,7 @@ interface HTMLParagraphElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLPictureElement)
  */
-interface HTMLPictureElement extends HTMLElement {
+interface HTMLPictureElement extends AttrElement {
 }
 
 /**
@@ -1612,7 +1646,7 @@ interface HTMLPictureElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLPreElement)
  */
-interface HTMLPreElement extends HTMLElement {
+interface HTMLPreElement extends AttrElement {
 }
 
 
@@ -1621,7 +1655,7 @@ interface HTMLPreElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLProgressElement)
  */
-interface HTMLProgressElement extends HTMLElement {
+interface HTMLProgressElement extends AttrElement {
     /**
      * Defines the maximum, or "done" value for a progress element.
      *
@@ -1648,7 +1682,7 @@ interface HTMLProgressElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLQuoteElement)
  */
-interface HTMLQuoteElement extends HTMLElement {
+interface HTMLQuoteElement extends AttrElement {
     /**
      * Sets or retrieves reference information about the object.
      *
@@ -1663,7 +1697,7 @@ interface HTMLQuoteElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLScriptElement)
  */
-interface HTMLScriptElement extends HTMLElement {
+interface HTMLScriptElement extends AttrElement {
     async: boolean;
     crossOrigin: string | null;
     /** Sets or retrieves the status of the script. */
@@ -1686,7 +1720,7 @@ interface HTMLScriptElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSelectElement)
  */
-interface HTMLSelectElement extends HTMLElement {
+interface HTMLSelectElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSelectElement/autocomplete) */
     autocomplete: AutoFill;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSelectElement/disabled) */
@@ -1776,7 +1810,7 @@ interface HTMLSelectElement extends HTMLElement {
      *
      * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSelectElement/add)
      */
-    add(element: HTMLOptionElement | HTMLOptGroupElement, before?: HTMLElement | number | null): void;
+    add(element: HTMLOptionElement | HTMLOptGroupElement, before?: AttrElement | number | null): void;
     /**
      * Returns whether a form will validate when it is submitted, without having to submit it.
      *
@@ -1820,7 +1854,7 @@ interface HTMLSelectElement extends HTMLElement {
 
 
 /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSlotElement) */
-interface HTMLSlotElement extends HTMLElement {
+interface HTMLSlotElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSlotElement/name) */
     name: string;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSlotElement/assign) */
@@ -1837,7 +1871,7 @@ interface HTMLSlotElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSourceElement)
  */
-interface HTMLSourceElement extends HTMLElement {
+interface HTMLSourceElement extends AttrElement {
     height: number;
     /**
      * Gets or sets the intended media type of the media source.
@@ -1870,7 +1904,7 @@ interface HTMLSourceElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLSpanElement)
  */
-interface HTMLSpanElement extends HTMLElement {
+interface HTMLSpanElement extends AttrElement {
 }
 
 
@@ -1879,7 +1913,7 @@ interface HTMLSpanElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLStyleElement)
  */
-interface HTMLStyleElement extends HTMLElement, LinkStyle {
+interface HTMLStyleElement extends AttrElement, LinkStyle {
     /**
      * Enables or disables the style sheet.
      *
@@ -1899,7 +1933,7 @@ interface HTMLStyleElement extends HTMLElement, LinkStyle {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableCaptionElement)
  */
-interface HTMLTableCaptionElement extends HTMLElement {
+interface HTMLTableCaptionElement extends AttrElement {
 }
 
 
@@ -1908,7 +1942,7 @@ interface HTMLTableCaptionElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableCellElement)
  */
-interface HTMLTableCellElement extends HTMLElement {
+interface HTMLTableCellElement extends AttrElement {
     /**
      * Sets or retrieves abbreviated text for the object.
      *
@@ -1953,7 +1987,7 @@ interface HTMLTableCellElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableColElement)
  */
-interface HTMLTableColElement extends HTMLElement {
+interface HTMLTableColElement extends AttrElement {
     /**
      * Sets or retrieves the number of columns in the group.
      *
@@ -1969,7 +2003,7 @@ interface HTMLTableColElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableElement)
  */
-interface HTMLTableElement extends HTMLElement {
+interface HTMLTableElement extends AttrElement {
     /**
      * Retrieves the caption object of a table.
      *
@@ -2053,7 +2087,7 @@ interface HTMLTableElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableRowElement)
  */
-interface HTMLTableRowElement extends HTMLElement {
+interface HTMLTableRowElement extends AttrElement {
     /**
      * Retrieves the position of the object in the rows collection for the table.
      *
@@ -2088,7 +2122,7 @@ interface HTMLTableRowElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTableSectionElement)
  */
-interface HTMLTableSectionElement extends HTMLElement {
+interface HTMLTableSectionElement extends AttrElement {
     /**
      * Removes the specified row (tr) from the element and from the rows collection.
      * @param index Number that specifies the zero-based position in the rows collection of the row to remove.
@@ -2111,7 +2145,7 @@ interface HTMLTableSectionElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTemplateElement)
  */
-interface HTMLTemplateElement extends HTMLElement {
+interface HTMLTemplateElement extends AttrElement {
     /**
      * Returns the template contents (a DocumentFragment).
      *
@@ -2126,7 +2160,7 @@ interface HTMLTemplateElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTextAreaElement)
  */
-interface HTMLTextAreaElement extends HTMLElement {
+interface HTMLTextAreaElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTextAreaElement/autocomplete) */
     autocomplete: AutoFill;
     /** Sets or retrieves the width of the object. */
@@ -2197,7 +2231,7 @@ interface HTMLTextAreaElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTimeElement)
  */
-interface HTMLTimeElement extends HTMLElement {
+interface HTMLTimeElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTimeElement/dateTime) */
     dateTime: string;
 }
@@ -2208,7 +2242,7 @@ interface HTMLTimeElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTitleElement)
  */
-interface HTMLTitleElement extends HTMLElement {
+interface HTMLTitleElement extends AttrElement {
     /**
      * Retrieves or sets the text of the object as a string.
      *
@@ -2223,7 +2257,7 @@ interface HTMLTitleElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTrackElement)
  */
-interface HTMLTrackElement extends HTMLElement {
+interface HTMLTrackElement extends AttrElement {
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTrackElement/default) */
     default: boolean;
     /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLTrackElement/kind) */
@@ -2254,221 +2288,48 @@ interface HTMLTrackElement extends HTMLElement {
  *
  * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLUListElement)
  */
-interface HTMLUListElement extends HTMLElement {
+interface HTMLUListElement extends AttrElement {
 }
 
 
-/**
- * Provides special properties and methods for manipulating video objects. It also inherits properties and methods of HTMLMediaElement and HTMLElement.
- *
- * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement)
- */
-interface HTMLVideoElement extends HTMLMediaElement {
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/disablePictureInPicture) */
-    disablePictureInPicture: boolean;
-    /**
-     * Gets or sets the height of the video element.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/height)
-     */
-    height: number;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/enterpictureinpicture_event) */
-    onenterpictureinpicture: ((this: HTMLVideoElement, ev: Event) => any) | null;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/leavepictureinpicture_event) */
-    onleavepictureinpicture: ((this: HTMLVideoElement, ev: Event) => any) | null;
-    /** Gets or sets the playsinline of the video element. for example, On iPhone, video elements will now be allowed to play inline, and will not automatically enter fullscreen mode when playback begins. */
-    playsInline: boolean;
-    /**
-     * Gets or sets a URL of an image to display, for example, like a movie poster. This can be a still frame from the video, or another image if no video data is available.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/poster)
-     */
-    poster: string;
-    /**
-     * Gets the intrinsic height of a video in CSS pixels, or zero if the dimensions are not known.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/videoHeight)
-     */
-    readonly videoHeight: number;
-    /**
-     * Gets the intrinsic width of a video in CSS pixels, or zero if the dimensions are not known.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/videoWidth)
-     */
-    readonly videoWidth: number;
-    /**
-     * Gets or sets the width of the video element.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/width)
-     */
-    width: number;
-    cancelVideoFrameCallback(handle: number): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/getVideoPlaybackQuality) */
-    getVideoPlaybackQuality(): VideoPlaybackQuality;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLVideoElement/requestPictureInPicture) */
-    requestPictureInPicture(): Promise<PictureInPictureWindow>;
-    requestVideoFrameCallback(callback: VideoFrameRequestCallback): number;
-}
-
-
-
-/**
- * This Fetch API interface allows you to perform various actions on HTTP request and response headers. These actions include retrieving, setting, adding to, and removing. A Headers object has an associated header list, which is initially empty and consists of zero or more name and value pairs.  You can add to this using methods like append() (see Examples.) In all methods of this interface, header names are matched by case-insensitive byte sequence.
- *
- * [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers)
- */
-interface Headers {
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers/append) */
-    append(name: string, value: string): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers/delete) */
-    delete(name: string): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers/get) */
-    get(name: string): string | null;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers/getSetCookie) */
-    getSetCookie(): string[];
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers/has) */
-    has(name: string): boolean;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/Headers/set) */
-    set(name: string, value: string): void;
-    forEach(callbackfn: (value: string, key: string, parent: Headers) => void, thisArg?: any): void;
-}
-
-
-/**
- * Allows manipulation of the browser session history, that is the pages visited in the tab or frame that the current page is loaded in.
- *
- * [MDN Reference](https://developer.mozilla.org/docs/Web/API/History)
- */
-interface History {
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/length) */
-    readonly length: number;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/scrollRestoration) */
-    scrollRestoration: ScrollRestoration;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/state) */
-    readonly state: any;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/back) */
-    back(): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/forward) */
-    forward(): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/go) */
-    go(delta?: number): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/pushState) */
-    pushState(data: any, unused: string, url?: string | URL | null): void;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/History/replaceState) */
-    replaceState(data: any, unused: string, url?: string | URL | null): void;
-}
-
-
-/**
- * This IndexedDB API interface represents a cursor for traversing or iterating over multiple records in a database.
- *
- * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor)
- */
-interface IDBCursor {
-    /**
-     * Returns the direction ("next", "nextunique", "prev" or "prevunique") of the cursor.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/direction)
-     */
-    readonly direction: IDBCursorDirection;
-    /**
-     * Returns the key of the cursor. Throws a "InvalidStateError" DOMException if the cursor is advancing or is finished.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/key)
-     */
-    readonly key: IDBValidKey;
-    /**
-     * Returns the effective key of the cursor. Throws a "InvalidStateError" DOMException if the cursor is advancing or is finished.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/primaryKey)
-     */
-    readonly primaryKey: IDBValidKey;
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/request) */
-    readonly request: IDBRequest;
-    /**
-     * Returns the IDBObjectStore or IDBIndex the cursor was opened from.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/source)
-     */
-    readonly source: IDBObjectStore | IDBIndex;
-    /**
-     * Advances the cursor through the next count records in range.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/advance)
-     */
-    advance(count: number): void;
-    /**
-     * Advances the cursor to the next record in range.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/continue)
-     */
-    continue(key?: IDBValidKey): void;
-    /**
-     * Advances the cursor to the next record in range matching or after key and primaryKey. Throws an "InvalidAccessError" DOMException if the source is not an index.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/continuePrimaryKey)
-     */
-    continuePrimaryKey(key: IDBValidKey, primaryKey: IDBValidKey): void;
-    /**
-     * Delete the record pointed at by the cursor with a new value.
-     *
-     * If successful, request's result will be undefined.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/delete)
-     */
-    delete(): IDBRequest<undefined>;
-    /**
-     * Updated the record pointed at by the cursor with a new value.
-     *
-     * Throws a "DataError" DOMException if the effective object store uses in-line keys and the key would have changed.
-     *
-     * If successful, request's result will be the record's key.
-     *
-     * [MDN Reference](https://developer.mozilla.org/docs/Web/API/IDBCursor/update)
-     */
-    update(value: any): IDBRequest<IDBValidKey>;
-}
-
-
-
-export interface HTMLElementTagNameMap {
+export interface ElementTagNameMap {
     "a": HTMLAnchorElement;
-    "abbr": HTMLElement;
-    "address": HTMLElement;
+    "abbr": AttrElement;
+    "address": AttrElement;
     "area": HTMLAreaElement;
-    "article": HTMLElement;
-    "aside": HTMLElement;
+    "article": AttrElement;
+    "aside": AttrElement;
     "audio": HTMLAudioElement;
-    "b": HTMLElement;
+    "b": AttrElement;
     "base": HTMLBaseElement;
-    "bdi": HTMLElement;
-    "bdo": HTMLElement;
+    "bdi": AttrElement;
+    "bdo": AttrElement;
     "blockquote": HTMLQuoteElement;
     "body": HTMLBodyElement;
     "br": HTMLBRElement;
     "button": HTMLButtonElement;
     "canvas": HTMLCanvasElement;
     "caption": HTMLTableCaptionElement;
-    "cite": HTMLElement;
-    "code": HTMLElement;
+    "cite": AttrElement;
+    "code": AttrElement;
     "col": HTMLTableColElement;
     "colgroup": HTMLTableColElement;
     "data": HTMLDataElement;
     "datalist": HTMLDataListElement;
-    "dd": HTMLElement;
+    "dd": AttrElement;
     "del": HTMLModElement;
     "details": HTMLDetailsElement;
-    "dfn": HTMLElement;
+    "dfn": AttrElement;
     "dialog": HTMLDialogElement;
     "div": HTMLDivElement;
     "dl": HTMLDListElement;
-    "dt": HTMLElement;
-    "em": HTMLElement;
+    "dt": AttrElement;
+    "em": AttrElement;
     "embed": HTMLEmbedElement;
     "fieldset": HTMLFieldSetElement;
-    "figcaption": HTMLElement;
-    "figure": HTMLElement;
-    "footer": HTMLElement;
+    "figcaption": AttrElement;
+    "figure": AttrElement;
+    "footer": AttrElement;
     "form": HTMLFormElement;
     "h1": HTMLHeadingElement;
     "h2": HTMLHeadingElement;
@@ -2477,28 +2338,28 @@ export interface HTMLElementTagNameMap {
     "h5": HTMLHeadingElement;
     "h6": HTMLHeadingElement;
     "head": HTMLHeadElement;
-    "header": HTMLElement;
-    "hgroup": HTMLElement;
+    "header": AttrElement;
+    "hgroup": AttrElement;
     "hr": HTMLHRElement;
     "html": HTMLHtmlElement;
-    "i": HTMLElement;
+    "i": AttrElement;
     "iframe": HTMLIFrameElement;
     "img": HTMLImageElement;
     "input": HTMLInputElement;
     "ins": HTMLModElement;
-    "kbd": HTMLElement;
+    "kbd": AttrElement;
     "label": HTMLLabelElement;
     "legend": HTMLLegendElement;
     "li": HTMLLIElement;
     "link": HTMLLinkElement;
-    "main": HTMLElement;
+    "main": AttrElement;
     "map": HTMLMapElement;
-    "mark": HTMLElement;
+    "mark": AttrElement;
     "menu": HTMLMenuElement;
     "meta": HTMLMetaElement;
     "meter": HTMLMeterElement;
-    "nav": HTMLElement;
-    "noscript": HTMLElement;
+    "nav": AttrElement;
+    "noscript": AttrElement;
     "object": HTMLObjectElement;
     "ol": HTMLOListElement;
     "optgroup": HTMLOptGroupElement;
@@ -2509,24 +2370,24 @@ export interface HTMLElementTagNameMap {
     "pre": HTMLPreElement;
     "progress": HTMLProgressElement;
     "q": HTMLQuoteElement;
-    "rp": HTMLElement;
-    "rt": HTMLElement;
-    "ruby": HTMLElement;
-    "s": HTMLElement;
-    "samp": HTMLElement;
+    "rp": AttrElement;
+    "rt": AttrElement;
+    "ruby": AttrElement;
+    "s": AttrElement;
+    "samp": AttrElement;
     "script": HTMLScriptElement;
-    "search": HTMLElement;
-    "section": HTMLElement;
+    "search": AttrElement;
+    "section": AttrElement;
     "select": HTMLSelectElement;
     "slot": HTMLSlotElement;
-    "small": HTMLElement;
+    "small": AttrElement;
     "source": HTMLSourceElement;
     "span": HTMLSpanElement;
-    "strong": HTMLElement;
+    "strong": AttrElement;
     "style": HTMLStyleElement;
-    "sub": HTMLElement;
-    "summary": HTMLElement;
-    "sup": HTMLElement;
+    "sub": AttrElement;
+    "summary": AttrElement;
+    "sup": AttrElement;
     "table": HTMLTableElement;
     "tbody": HTMLTableSectionElement;
     "td": HTMLTableCellElement;
@@ -2539,10 +2400,10 @@ export interface HTMLElementTagNameMap {
     "title": HTMLTitleElement;
     "tr": HTMLTableRowElement;
     "track": HTMLTrackElement;
-    "u": HTMLElement;
+    "u": AttrElement;
     "ul": HTMLUListElement;
-    "var": HTMLElement;
+    "var": AttrElement;
     "video": HTMLVideoElement;
-    "wbr": HTMLElement;
+    "wbr": AttrElement;
 }
 
