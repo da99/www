@@ -82,46 +82,62 @@ export function body(...eles: (string | Element)[]) {
 }
 
 
+type ElementBody = ((f: Function) => Element);
+
 /*
   * e('input', {name: "_something"}, "My Text")
   * e('a', '.red#ID', {href: "https://some.url"}, "My Text")
   * e('div', e('span', "My Text"))
-  * e('div', '#main', e('span', "My Text"))
+  * e('div', '#main', (e) => {
+      e('span', "My Text")
+    })
   * e('div', '#main',
   *   e('span', "My Text"),
   *   e('div', "My Text")
   * )
 */
-export function element<T extends keyof ElementTagNameMap>(tag_name: T, ...body: (string | Attrs<T> | ((f: typeof element) => void))[]) {
+export function element<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
   const e = document.createElement(tag_name)
 
   let i = -1;
-  for (const v of body){
+  const last_i = args.length - 1;
+  for (const v of args){
     i++;
+
+    if (typeof v === 'string') {
+      const is_id_class = i === 0 && (v.at(0) === '#' || v.at(0) === '.');
+
+      if (is_id_class) {
+        const {id, classes} = split_id_class(v);
+        if(id)
+          e.setAttribute('id', id);
+        for (const x of classes)
+          e.classList.add(x)
+      }
+
+      if (last_i == i) {
+        e.appendChild(document.createTextNode(v));
+        continue;
+      }
+
+      throw new Error(`Invalid string: ${v}`);
+    } // if string
 
     if (is_plain_object(v)) {
       __set_attrs(e, v);
       continue;
     }
 
-    if (typeof v !== 'string') {
-      e.appendChild(v as Element);
+    if (typeof v === 'function') {
+      const ele_func = function <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]) {
+        const sub_e = element(tag_name, ...args);
+        e.appendChild(sub_e);
+        return sub_e;
+      };
+      (v as ElementBody)(ele_func);
       continue;
     }
-
-    const is_id_class = i === 0 && (v.at(0) === '#' || v.at(0) === '.');
-
-    if (!is_id_class) {
-      e.appendChild(document.createTextNode(v));
-      continue;
-    }
-
-    const {id, classes} = split_id_class(v);
-    if(id)
-      e.setAttribute('id', id);
-    for (const x of classes)
-      e.classList.add(x)
-  }
+  } // if string
 
   return e;
 } // export function
