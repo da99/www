@@ -14,12 +14,9 @@ import { log, warn } from './log.mts';
 /* This is also used for CSRF protection. */
 export const X_SENT_FROM = "X_SENT_FROM";
 
-const THE_BODY = document.body;
-
 export interface Fields_State {
   [index: string]: string
 }
-
 export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_\-]+)+$/
 
 export function is_void_tagname(x: string) {
@@ -169,9 +166,9 @@ export const dom = {
 
   id: {
     __plus_one(): number {
-      let current_id_count =  THE_BODY.getAttribute('data-id-count') || "-1";
+      let current_id_count =  document.body.getAttribute('data-id-count') || "-1";
       const new_id = parseInt(current_id_count) + 1;
-      THE_BODY.setAttribute('data-id-count', new_id.toString());
+      document.body.setAttribute('data-id-count', new_id.toString());
       return new_id;
     },
 
@@ -366,7 +363,7 @@ export const css = {
 
 export const use = {
   default_forms() {
-    return THE_BODY.addEventListener('click', form.on_click_button);
+    return document.body.addEventListener('click', form.on_click_button);
   } // export function
 };
 
@@ -486,8 +483,8 @@ export const dispatch = {
       const form_id = dom.id.upsert(e);
 
       const data = form.data(e);
-      THE_BODY.dispatchEvent(new CustomEvent('* submit', {detail: data}));
-      THE_BODY.dispatchEvent(new CustomEvent(`${e.id} submit`, {detail: data}));
+      document.body.dispatchEvent(new CustomEvent('* submit', {detail: data}));
+      document.body.dispatchEvent(new CustomEvent(`${e.id} submit`, {detail: data}));
 
       if (action_url.indexOf('/') < 0) // then, no fetch needed.
         return true;
@@ -497,22 +494,22 @@ export const dispatch = {
 
     cancel(e: HTMLFormElement) {
       const data = form.data(e);
-      THE_BODY.dispatchEvent(new CustomEvent('* cancel', {detail: data}));
-      THE_BODY.dispatchEvent(new CustomEvent(`${e.id} cancel`, {detail: data}));
+      document.body.dispatchEvent(new CustomEvent('* cancel', {detail: data}));
+      document.body.dispatchEvent(new CustomEvent(`${e.id} cancel`, {detail: data}));
       return true;
     },
 
     reset(e: HTMLFormElement) {
       const data = form.data(e);
-      THE_BODY.dispatchEvent(new CustomEvent('* reset', {detail: data}));
-      THE_BODY.dispatchEvent(new CustomEvent(`${e.id} reset`, {detail: data}));
+      document.body.dispatchEvent(new CustomEvent('* reset', {detail: data}));
+      document.body.dispatchEvent(new CustomEvent(`${e.id} reset`, {detail: data}));
       return true;
     }
   },
 
   request(req: Request_Origin) {
-    THE_BODY.dispatchEvent(new CustomEvent('* request', {detail: req}));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} request`, {detail: req}));
+    document.body.dispatchEvent(new CustomEvent('* request', {detail: req}));
+    document.body.dispatchEvent(new CustomEvent(`${req.dom_id} request`, {detail: req}));
   },
 
   async response(req: Request_Origin, raw_resp: Response) {
@@ -537,8 +534,8 @@ export const dispatch = {
 
     const detail = {detail: {response: resp, request: req}};
 
-    THE_BODY.dispatchEvent(new CustomEvent('* response', detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} response`, detail));
+    document.body.dispatchEvent(new CustomEvent('* response', detail));
+    document.body.dispatchEvent(new CustomEvent(`${req.dom_id} response`, detail));
 
     if (e)
       css.by_id.reset(req.dom_id);
@@ -550,8 +547,8 @@ export const dispatch = {
     const status = resp.status;
     const detail = {detail: {response: resp, request: req}};
     css.by_id.reset_to(status, req.dom_id);
-    THE_BODY.dispatchEvent(new CustomEvent(`* ${status}`, detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${req.dom_id} ${status}`, detail));
+    document.body.dispatchEvent(new CustomEvent(`* ${status}`, detail));
+    document.body.dispatchEvent(new CustomEvent(`${req.dom_id} ${status}`, detail));
   },
 
   server_error(req: Request_Origin, raw_resp: Response) {
@@ -561,8 +558,8 @@ export const dispatch = {
     if (e) {
       css.by_element.reset_to('server_error', e);
       const detail = {detail: {request: req, response: raw_resp}};
-      THE_BODY.dispatchEvent(new CustomEvent('* server_error', detail));
-      THE_BODY.dispatchEvent(new CustomEvent(`${e.id} server_error`, detail));
+      document.body.dispatchEvent(new CustomEvent('* server_error', detail));
+      document.body.dispatchEvent(new CustomEvent(`${e.id} server_error`, detail));
       return true;
     }
     return false;
@@ -572,8 +569,8 @@ export const dispatch = {
     warn(error);
     warn(`!!! Network error: ${error.message}`);
     const detail = {detail: {error, request}};
-    THE_BODY.dispatchEvent(new CustomEvent('* network_error', detail));
-    THE_BODY.dispatchEvent(new CustomEvent(`${request.dom_id} network_error`, detail));
+    document.body.dispatchEvent(new CustomEvent('* network_error', detail));
+    document.body.dispatchEvent(new CustomEvent(`${request.dom_id} network_error`, detail));
 
     const e = document.getElementById(request.dom_id);
     if (e) {
