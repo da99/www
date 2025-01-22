@@ -354,14 +354,13 @@ interface MediaElement extends AttrElement {
 interface MenuElement extends AttrElement {
 }
 
-
 interface MetaElement extends AttrElement {
     content: string;
     httpEquiv: string;
     media: string;
     name: string;
+    charset: "utf-8";
 }
-
 
 interface MeterElement extends AttrElement {
     high: number;
