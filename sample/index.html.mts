@@ -7,12 +7,10 @@ print_html((t) => {
 
   t('div', function (div) {
     div('p', '#blue.ish.now', 'Also inside DIV.')
-    div('div', '.hello', (d2) => d2('p', 'div div p') )
+    div('div', '.hello', (d) => d('p', 'div div p') )
   })
 
 
-  t('div', '.hello', (d1) => d1('p', 'add_to_body') )
   t('p', '#red.ish.class', 'done')
-
 });
 
