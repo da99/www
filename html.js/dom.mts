@@ -73,13 +73,26 @@ export function fragment(...eles: (string | Element)[]) {
   return dom_fragment;
 }
 
+export function title(str: string) {
+  const t = document.querySelector('title');
+  if (!t)
+    throw new Error('title element not found.');
+  t.appendChild(document.createTextNode(str));
+  return t;
+}
+
 export function body(...eles: (string | Element)[]) {
   document.body.append(fragment(...eles));
   return document.body;
 }
 
+type ElementBody = ((f: typeof element) => Element | void);
 
-type ElementBody = ((f: Function) => Element);
+export function body_append<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
+  const new_e = element(tag_name, ...args);
+  document.body.appendChild(new_e);
+  return new_e;
+}
 
 /*
   * e('input', {name: "_something"}, "My Text")
@@ -110,6 +123,7 @@ export function element<T extends keyof ElementTagNameMap>(tag_name: T, ...args:
           e.setAttribute('id', id);
         for (const x of classes)
           e.classList.add(x)
+        continue;
       }
 
       if (last_i == i) {
@@ -117,7 +131,7 @@ export function element<T extends keyof ElementTagNameMap>(tag_name: T, ...args:
         continue;
       }
 
-      throw new Error(`Invalid string: ${v}`);
+      throw new Error(`Invalid string: ${v} i:${i}`);
     } // if string
 
     if (is_plain_object(v)) {
@@ -126,13 +140,10 @@ export function element<T extends keyof ElementTagNameMap>(tag_name: T, ...args:
     }
 
     if (typeof v === 'function') {
-      const ele_func = function <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]) {
-        const sub_e = element(tag_name, ...args);
-        e.appendChild(sub_e);
-        return sub_e;
+      function ele_func<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]) {
+        return e.appendChild(element(tag_name, ...args));
       };
-      (v as ElementBody)(ele_func);
-      continue;
+      (v as Function)(ele_func);
     }
   } // if string
 
