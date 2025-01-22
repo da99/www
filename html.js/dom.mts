@@ -81,6 +81,22 @@ export function title(str: string) {
   return t;
 }
 
+export function meta(attrs: Attrs<'meta'>) {
+  const h = document.querySelector('head');
+  if (h) {
+    h.appendChild(element('meta', attrs));
+  }
+  return h;
+}
+
+export function link(attrs: Attrs<'link'>) {
+  const h = document.querySelector('head');
+  if (h) {
+    h.appendChild(element('link', attrs));
+  }
+  return h;
+}
+
 export function body(...eles: (string | Element)[]) {
   document.body.append(fragment(...eles));
   return document.body;
