@@ -197,43 +197,6 @@ export function element<T extends keyof HTMLElementTagNameMap>(tag_name: T, ...p
   return new_e;
 } // export function
 
-
-// html5(
-//   e('html', {lang: 'en'}, () -> {
-//     e('head', e('title'))
-//     e('body')
-//   })
-// )
-export function html5(ele_func: (e: typeof element) => void) {
-  PAGES.new();
-  ele_func(element);
-  const p = PAGES.pop();
-  if (!p)
-    return '';
-  return(`<!DOCTYPE html><html lang="en">${p.to_html()}</html>`);
-} // func
-
-export function to_html(x: BChild) {
-  if (typeof x === 'string')
-    return html_escape(x);
-  else
-    return x.to_html();
-}
-
-
-// export function fragment(...eles: (string | Element)[]) {
+// export function fragment(...eles: (string | Element)[])
 //   let dom_fragment = document.createDocumentFragment();
-//   for (const x of eles) {
-//     if (typeof x === 'string')
-//       dom_fragment.appendChild(document.createTextNode(x));
-//     else
-//       dom_fragment.appendChild(x);
-//   }
-//
 //   return dom_fragment;
-// }
-//
-// export function body(...eles: (string | Element)[]) {
-//   document.body.append(fragment(...eles));
-//   return document.body;
-// }

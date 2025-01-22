@@ -61,18 +61,6 @@ export function split_id_class(new_class: string) {
   return {id, classes};
 } // func
 
-export function fragment(...eles: (string | Element)[]) {
-  let dom_fragment = document.createDocumentFragment();
-  for (const x of eles) {
-    if (typeof x === 'string')
-      dom_fragment.appendChild(document.createTextNode(x));
-    else
-      dom_fragment.appendChild(x);
-  }
-
-  return dom_fragment;
-}
-
 export function title(str: string) {
   const t = document.querySelector('title');
   if (!t)
@@ -97,18 +85,34 @@ export function link(attrs: Attrs<'link'>) {
   return h;
 }
 
-export function body(...eles: (string | Element)[]) {
-  document.body.append(fragment(...eles));
-  return document.body;
-}
-
 type ElementBody = ((f: typeof element) => Element | void);
 
-export function body_append<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
-  const new_e = element(tag_name, ...args);
-  document.body.appendChild(new_e);
-  return new_e;
+// export function body_append<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
+export function body_append(f: ((x: string) => void)): DocumentFragment {
+  const frag = fragment(f);
+  document.body.appendChild(frag);
+  return frag;
+} // function
+
+export function fragment(f: ((x: number) => void)) {
+  let dom_fragment = document.createDocumentFragment();
+
+  let childs = [];
+  const e = function <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
+    const new_e = element(tag_name, ...args);
+    childs.push(new_e);
+    return new_e;
+  }
+  for (const x of eles) {
+    if (typeof x === 'string')
+      dom_fragment.appendChild(document.createTextNode(x));
+    else
+      dom_fragment.appendChild(x);
+  }
+
+  return dom_fragment;
 }
+
 
 /*
   * e('input', {name: "_something"}, "My Text")
