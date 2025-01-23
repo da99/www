@@ -94,7 +94,7 @@ export function body_append(f: ((x: string) => void)): DocumentFragment {
   return frag;
 } // function
 
-export function fragment(f: ((x: number) => void)) {
+export function fragment(f: Function) {
   let dom_fragment = document.createDocumentFragment();
 
   let childs = [];
@@ -103,13 +103,6 @@ export function fragment(f: ((x: number) => void)) {
     childs.push(new_e);
     return new_e;
   }
-  for (const x of eles) {
-    if (typeof x === 'string')
-      dom_fragment.appendChild(document.createTextNode(x));
-    else
-      dom_fragment.appendChild(x);
-  }
-
   return dom_fragment;
 }
 
