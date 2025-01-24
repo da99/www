@@ -5,9 +5,9 @@ print_html((t) => {
 
   title('Hello, World ;->')
 
-  t('div', function (div) {
-    div('p', '#blue.ish.now', 'Also inside DIV.')
-    div('div', '.hello', (d) => d('p', 'div div p') )
+  t('div', function () {
+    t('p', '#blue.ish.now', 'Also inside DIV.')
+    t('div', '.hello', () => t('p', 'div div p') )
   })
 
 

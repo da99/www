@@ -19,6 +19,9 @@ export interface Fields_State {
 }
 export const SPLIT_ID_CLASS_VALID_PATTERN = /^([\.\#][a-z0-9\_\-]+)+$/
 
+export const VALID_RELATIVE_URL = /^\/[a-zA-Z0-9\.\-\/]+(#[a-z0-9\_\-]+)?$/i
+export const VALID_TEMPLATE_URL = /^\{[A-Z\_0-9]+\}$/
+
 export function is_void_tagname(x: string) {
     switch (x) {
       case 'area':
@@ -88,24 +91,74 @@ export function link(attrs: Attrs<'link'>) {
 type ElementBody = ((f: typeof element) => Element | void);
 
 // export function body_append<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
-export function body_append(f: ((x: string) => void)): DocumentFragment {
-  const frag = fragment(f);
-  document.body.appendChild(frag);
-  return frag;
-} // function
+// export function body_append(f: ((x: Element_Function) => void): DocumentFragment {
+//   const frag = fragment(f);
+//   document.body.appendChild(frag);
+//   return frag;
+// } // function
 
-export function fragment(f: Function) {
+export type Element_Function = <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | Function)[]) => Element;
+
+export function fragment(f: ((x: Element_Function) => void)): DocumentFragment {
   let dom_fragment = document.createDocumentFragment();
 
-  let childs = [];
-  const e = function <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
-    const new_e = element(tag_name, ...args);
-    childs.push(new_e);
+  let childs: (DocumentFragment | Element)[] = [];
+  childs.push(dom_fragment);
+
+  const ele_func = function <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | Function)[]): Element {
+    const new_e = document.createElement(tag_name)
+    const prev_e = childs.at(-1);
+    if (prev_e)
+      prev_e.appendChild(new_e)
+    childs.push(new_e)
+    finish_element(new_e, ...args);
+    childs.pop();
     return new_e;
   }
-  return dom_fragment;
-}
 
+  f(ele_func);
+
+  return dom_fragment;
+} // function
+
+function finish_element<T extends keyof ElementTagNameMap>(e: Element, ...args: (string | Attrs<T> | Function)[]): Element {
+  let i = -1;
+  const last_i = args.length - 1;
+  for (const v of args){
+    i++;
+
+    if (typeof v === 'string') {
+      const is_id_class = i === 0 && (v.at(0) === '#' || v.at(0) === '.');
+
+      if (is_id_class) {
+        const {id, classes} = split_id_class(v);
+        if(id)
+          e.setAttribute('id', id);
+        for (const x of classes)
+          e.classList.add(x)
+        continue;
+      }
+
+      if (last_i == i) {
+        e.appendChild(document.createTextNode(v));
+        continue;
+      }
+
+      throw new Error(`Invalid string: ${v} i:${i}`);
+    } // if string
+
+    if (is_plain_object(v)) {
+      __set_attrs(e, v);
+      continue;
+    }
+
+    if (typeof v === 'function') {
+      (v as Function)();
+    }
+  } // if string
+
+  return e;
+} // export function
 
 /*
   * e('input', {name: "_something"}, "My Text")
@@ -171,11 +224,28 @@ function __set_attrs(ele: Element, attrs: any) {
         ele.setAttribute('for', attrs[k]);
         break;
       case 'href':
-        try {
-          ele.setAttribute(k, (new URL((attrs as ElementTagNameMap['a'])[k])).toString());
-        } catch (e) {
-          warn("Invalid url.")
-        }
+        const new_url = (attrs as ElementTagNameMap['a'])[k];
+        const first_char = new_url.at(0)
+        switch (first_char) {
+          case '/':
+            if (VALID_RELATIVE_URL.test(new_url))
+              ele.setAttribute(k, new_url);
+            else
+              throw new Error(`Invalid relative url: ${new_url}`)
+            break;
+          case '{':
+            if (VALID_TEMPLATE_URL.test(new_url))
+              ele.setAttribute(k, new_url);
+            else
+              throw new Error(`Invalid template url: ${new_url}`)
+            break;
+          default:
+            try {
+              ele.setAttribute(k, (new URL(new_url)).toString());
+            } catch (e) {
+              warn(`Invalid url: ${new_url}`)
+            }
+        } // switch
         break;
       default:
         ele.setAttribute(k, attrs[k]);
