@@ -91,11 +91,11 @@ export function link(attrs: Attrs<'link'>) {
 type ElementBody = ((f: typeof element) => Element | void);
 
 // export function body_append<T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | ElementBody)[]): Element {
-// export function body_append(f: ((x: Element_Function) => void): DocumentFragment {
-//   const frag = fragment(f);
-//   document.body.appendChild(frag);
-//   return frag;
-// } // function
+export function body_append(f: ((x: Element_Function) => void)): DocumentFragment {
+  const frag = fragment(f);
+  document.body.appendChild(frag);
+  return frag;
+} // function
 
 export type Element_Function = <T extends keyof ElementTagNameMap>(tag_name: T, ...args: (string | Attrs<T> | Function)[]) => Element;
 
