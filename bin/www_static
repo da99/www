@@ -239,6 +239,7 @@ when '-h', '--help', 'help'
   puts "#{prog} upload [file FILEPATH]"
   puts "#{prog} download pure.css to [DIR]"
   puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
+  puts "#{prog} list script files"
 
 when /template from (.+) to (.+) with (.+)/
   tfile = Regexp.last_match(1)
@@ -331,6 +332,10 @@ when 'upload'
   puts ''
   files.each { |file| puts file }
   # puts ''
+
+when 'list script files'
+  Dir.chdir('build') if File.basename(Dir.pwd) != 'build'
+  system("find . -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'")
 
 when /upload file (.+)/
   files = FILES.upload([Regexp.last_match(1)])
