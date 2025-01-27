@@ -149,10 +149,19 @@ class FILES
       end # Dir
     end # def
 
+    def script_files
+      output = `find "#{BUILD_DIR}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'`
+      exit $CHILD_STATUS.exitstatus unless $CHILD_STATUS.success?
+      output.strip.split('\n')
+    end
   end # class
 end # class
 
-def build_mjs(bun_files = FILES.find('build', "-name '*.mts' -and -not -name '*.html.mts' "))
+def scripts
+  FILES.find('build', "-name '*.mts' -and -not -name '*.html.mts' -and -not -path '*/base/*'")
+end
+
+def build_scripts(bun_files = scripts)
   if bun_files.empty?
     warn '--- No .mts files found.'
     return false
@@ -161,13 +170,24 @@ def build_mjs(bun_files = FILES.find('build', "-name '*.mts' -and -not -name '*.
   warn "--- TS files: #{bun_files.inspect}"
   case bun_files.size
   when 1
-    OS.run('bun', 'build', '--target', 'browser', '--outfile', bun_files.first.sub(/\.mts$/, '.mjs'), *bun_files)
+    OS.run(
+      'bun', 'build',
+      '--target', 'browser',
+      'minify',
+      '--outfile', bun_files.first.sub(/\.mts$/, '.mjs'),
+      *bun_files
+    )
   else
     OS.run(
-      'bun', 'build', '--target', 'browser',
-      '--outdir', 'build/section', '--splitting',
-      '--chunk-naming', '[dir]/lib.[name].[hash].mjs',
-      '--entry-naming', '[dir]/[name].mjs', *bun_files
+      'bun', 'build',
+      '--root', '.',
+      '--target', 'browser',
+      '--outdir', BUILD_DIR,
+      '--splitting',
+      '--minify',
+      '--chunk-naming', '[dir]/lib-[hash].mjs',
+      '--entry-naming', '[dir]/[name]-[hash].mjs',
+      *bun_files
     )
   end
 
@@ -221,7 +241,7 @@ def static_build(files = FILES.find(BUILD_DIR))
 
   return new_files if mts_files.empty?
 
-  new_files.concat build_mjs(mts_files)
+  new_files.concat build_scripts(mts_files)
 end # def static_build
 
 # =============================================================================
@@ -240,6 +260,7 @@ when '-h', '--help', 'help'
   puts "#{prog} download pure.css to [DIR]"
   puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
   puts "#{prog} list script files"
+  puts "#{prog} build script files"
 
 when /template from (.+) to (.+) with (.+)/
   tfile = Regexp.last_match(1)
@@ -333,9 +354,11 @@ when 'upload'
   files.each { |file| puts file }
   # puts ''
 
-when 'list script files'
-  Dir.chdir('build') if File.basename(Dir.pwd) != 'build'
-  system("find . -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'")
+when 'list scripts'
+  FILES.script_files.each { |f| puts f }
+
+when 'build scripts'
+  build_scripts
 
 when /upload file (.+)/
   files = FILES.upload([Regexp.last_match(1)])
