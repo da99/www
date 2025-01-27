@@ -149,47 +149,32 @@ class FILES
       end # Dir
     end # def
 
-    def script_files
+    def scripts
       output = `find "#{BUILD_DIR}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'`
       exit $CHILD_STATUS.exitstatus unless $CHILD_STATUS.success?
-      output.strip.split('\n')
+      output.strip.split("\n")
     end
   end # class
 end # class
 
-def scripts
-  FILES.find('build', "-name '*.mts' -and -not -name '*.html.mts' -and -not -path '*/base/*'")
-end
-
-def build_scripts(bun_files = scripts)
+def build_scripts(bun_files = FILES.scripts)
   if bun_files.empty?
     warn '--- No .mts files found.'
     return false
   end
 
   warn "--- TS files: #{bun_files.inspect}"
-  case bun_files.size
-  when 1
-    OS.run(
-      'bun', 'build',
-      '--target', 'browser',
-      'minify',
-      '--outfile', bun_files.first.sub(/\.mts$/, '.mjs'),
-      *bun_files
-    )
-  else
-    OS.run(
-      'bun', 'build',
-      '--root', '.',
-      '--target', 'browser',
-      '--outdir', BUILD_DIR,
-      '--splitting',
-      '--minify',
-      '--chunk-naming', '[dir]/lib-[hash].mjs',
-      '--entry-naming', '[dir]/[name]-[hash].mjs',
-      *bun_files
-    )
-  end
+  OS.system(
+    'bun', 'build',
+    '--root', '.',
+    '--target', 'browser',
+    '--outdir', '.',
+    '--splitting',
+    '--minify',
+    '--chunk-naming', '[dir]/lib-[hash].mjs',
+    '--entry-naming', '[dir]/[name]-[hash].mjs',
+    *bun_files
+  )
 
   bun_files.map do |x|
     File.unlink x
@@ -259,8 +244,8 @@ when '-h', '--help', 'help'
   puts "#{prog} upload [file FILEPATH]"
   puts "#{prog} download pure.css to [DIR]"
   puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
-  puts "#{prog} list script files"
-  puts "#{prog} build script files"
+  puts "#{prog} list scripts"
+  puts "#{prog} build scripts"
 
 when /template from (.+) to (.+) with (.+)/
   tfile = Regexp.last_match(1)
@@ -355,7 +340,7 @@ when 'upload'
   # puts ''
 
 when 'list scripts'
-  FILES.script_files.each { |f| puts f }
+  FILES.scripts.each { |f| puts f }
 
 when 'build scripts'
   build_scripts
