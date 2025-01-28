@@ -77,6 +77,7 @@ class FILES
     def days_age_of_file(filepath)
       hours = hours_age_of_file(filepath)
       return 0 if hours < 24
+
       (hours / 24).to_i
     end
 
@@ -137,9 +138,7 @@ class FILES
     def download_pure_css(dir)
       FileUtils.mkdir_p dir
       Dir.chdir(dir) do
-        if File.exist?('pure.css') && days_age_of_file('pure.css') < 30
-          break false
-        end
+        break false if File.exist?('pure.css') && days_age_of_file('pure.css') < 30
 
         OS.system(%w[wget -O pure.css https://cdn.jsdelivr.net/npm/purecss@latest/build/base-min.css])
         OS.system(%w[wget -O pure-grids.css https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css])
@@ -260,7 +259,7 @@ when /template from (.+) to (.+) with (.+)/
   tvals = Regexp.last_match(3).split(',').map(&:strip).map { |kv| kv.split('=').map(&:strip) }
   tmpl = File.read(tfile)
   FileUtils.mkdir_p(tdir)
-  new_content = tvals.each_with_object(tmpl) do |(k,v), str|
+  new_content = tvals.each_with_object(tmpl) do |(k, v), str|
     str.gsub!("{#{k}}", v)
   end
 
