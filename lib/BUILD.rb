@@ -9,6 +9,10 @@ class BUILD
       @dir ||= OS.env('BUILD_DIR') || 'build'
     end
 
+    def key_name(filename)
+      filename.sub(%r{^/?(#{BUILD.dir}|\.)/}, '')
+    end
+
     def scripts
       output = `find "#{dir}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'`
       exit $CHILD_STATUS.exitstatus unless $CHILD_STATUS.success?

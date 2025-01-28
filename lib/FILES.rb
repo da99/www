@@ -1,9 +1,11 @@
+# frozen_string_literal: true
+
+require_relative './OS'
 
 class FILES
   class << self
     def find(dir, ext = "-not -name '.*'")
-      raw = `find "#{dir}" -type f #{ext}`
-      exit 2 unless $CHILD_STATUS.success?
+      raw = OS.run %( find "#{dir}" -type f #{ext} )
       raw.strip.split("\n")
     end # def
 
@@ -20,11 +22,7 @@ class FILES
     end
 
     def etag(fname)
-      `md5sum "#{fname}"`.strip.split.first
-    end
-
-    def key_name(filename)
-      filename.sub(%r{^/?(#{BUILD_DIR}|\.)/}, '')
+      OS.run(%( md5sum "#{fname}" )).strip.split.first
     end
 
     def add_etag_to_file_name(etag, path)

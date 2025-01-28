@@ -28,9 +28,10 @@ class OS
 
     def run(*cmd)
       warn "--- #{cmd.join ' '}"
-      content, stat = Open3.capture2(*cmd)
+      content, err, stat = Open3.capture3(*cmd)
       return content.strip if stat.success?
 
+      warn err
       warn "!!! Failed with exit #{stat.exitstatus}: #{cmd.inspect}"
       puts content.strip
       exit stat.exitstatus
