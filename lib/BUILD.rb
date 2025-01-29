@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 class BUILD
   class << self
@@ -6,21 +7,15 @@ class BUILD
     end
 
     def dir
-      @dir ||= OS.env('BUILD_DIR') || 'build'
+      @dir ||= ENV['BUILD_DIR'] || 'build'
     end
 
     def key_name(filename)
-      filename.sub(%r{^/?(#{BUILD.dir}|\.)/}, '')
-    end
-
-    def scripts
-      output = `find "#{dir}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'`
-      exit $CHILD_STATUS.exitstatus unless $CHILD_STATUS.success?
-      output.strip.split("\n")
+      filename.sub(%r{^/?(#{dir}|\.)/}, '')
     end
 
     def files_uploaded_json
-      @files_uploaded_json ||= "tmp/#{BUILD.bucket_name}.uploaded_files.json"
+      @files_uploaded_json ||= "tmp/#{bucket_name}.uploaded_files.json"
     end
 
     def uploaded_list
@@ -81,7 +76,6 @@ class BUILD
       end # Dir
     end # def
 
-
     def ensure_in_build_dir(raw_filename)
       expanded = File.expand_path(raw_filename)
 
@@ -91,6 +85,11 @@ class BUILD
       File.join(BUILD_DIR, temp_path)
     end # def
 
+    def scripts_list
+      OS.run(%(find "#{dir}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'))
+        .strip.split("\n")
+    end
+
     def scripts(bun_files = FILES.scripts)
       if bun_files.empty?
         warn '--- No .mts files found.'
@@ -98,17 +97,17 @@ class BUILD
       end
 
       warn "--- TS files: #{bun_files.inspect}"
-        OS.system(
-          'bun', 'build',
-          '--root', '.',
-          '--target', 'browser',
-          '--outdir', '.',
-          '--splitting',
-          '--minify',
-          '--chunk-naming', '[dir]/lib-[hash].mjs',
-          '--entry-naming', '[dir]/[name]-[hash].mjs',
-          *bun_files
-        )
+      OS.system(
+        'bun', 'build',
+        '--root', '.',
+        '--target', 'browser',
+        '--outdir', '.',
+        '--splitting',
+        '--minify',
+        '--chunk-naming', '[dir]/lib-[hash].mjs',
+        '--entry-naming', '[dir]/[name]-[hash].mjs',
+        *bun_files
+      )
 
       bun_files.map do |x|
         File.unlink x

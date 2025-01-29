@@ -29,11 +29,11 @@ class OS
     def run(*cmd)
       warn "--- #{cmd.join ' '}"
       content, err, stat = Open3.capture3(*cmd)
+      warn err if err && !err.empty?
       return content.strip if stat.success?
 
-      warn err
-      warn "!!! Failed with exit #{stat.exitstatus}: #{cmd.inspect}"
       puts content.strip
+      warn "!!! Failed with exit #{stat.exitstatus}: #{cmd.inspect}"
       exit stat.exitstatus
     end
   end # class << self
