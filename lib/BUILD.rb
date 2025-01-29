@@ -1,17 +1,27 @@
 # frozen_string_literal: true
 
+# Uses the following ENV values:
+#   BUILD_DIR   - defaults to 'build'
+#   BUCKET_NAME - Required if uploading.
+#   PUBLIC_DIR  - defaults to 'public' or 'Public'.
 class BUILD
   class << self
     def bucket_name
       @bucket_name ||= OS.env('BUCKET_NAME')
     end
 
-    def dir
-      @dir ||= ENV['BUILD_DIR'] || 'build'
+    def dirname
+      @dirname ||= ENV['BUILD_DIR'] || 'build'
+    end
+
+    def public_dirname
+      @public_dirname ||= ENV['PUBLIC_DIR'] ||
+                          (Dir.exist?('public') && 'public') ||
+                          (Dir.exist?('Public') && 'Public')
     end
 
     def key_name(filename)
-      filename.sub(%r{^/?(#{dir}|\.)/}, '')
+      File.expand_path(filename).sub(%r{^/?(#{File.expand_path(dirname)}|\.)/}, '')
     end
 
     def files_uploaded_json
@@ -27,7 +37,7 @@ class BUILD
     end
 
     def update_files_uploaded_json
-      raw = OS.run("mc ls --no-color --recursive --json #{bucket_name}/#{bucket_name} ")
+      raw = OS.run!("mc ls --no-color --recursive --json #{bucket_name}/#{bucket_name} ")
       new_content = raw.split("\n").map { |x| JSON.parse(x) }
       File.write(files_uploaded_json, JSON.pretty_generate(new_content))
       warn "--- wrote: #{files_uploaded_json}"
@@ -51,7 +61,7 @@ class BUILD
 
         mime = FILES.mime_type(file)
         pid = Process.fork do
-          OS.system(%W[
+          OS.system!(%W[
             bun x wrangler r2 object put #{File.join FILES.bucket_name, k} --file #{file} --content-type #{mime}
           ])
         end
@@ -68,10 +78,10 @@ class BUILD
       Dir.chdir(dir) do
         break false if File.exist?('pure.css') && days_age_of_file('pure.css') < 30
 
-        OS.system(%w[wget -O pure.css https://cdn.jsdelivr.net/npm/purecss@latest/build/base-min.css])
-        OS.system(%w[wget -O pure-grids.css https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css])
-        OS.system(%w[wget -O reset.css https://meyerweb.com/eric/tools/css/reset/reset.css])
-        OS.system('ls -hal')
+        OS.system!(%w[wget -O pure.css https://cdn.jsdelivr.net/npm/purecss@latest/build/base-min.css])
+        OS.system!(%w[wget -O pure-grids.css https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css])
+        OS.system!(%w[wget -O reset.css https://meyerweb.com/eric/tools/css/reset/reset.css])
+        OS.system!('ls -hal')
         true
       end # Dir
     end # def
@@ -79,14 +89,19 @@ class BUILD
     def ensure_in_build_dir(raw_filename)
       expanded = File.expand_path(raw_filename)
 
-      temp_path = expanded.sub(File.expand_path(BUILD_DIR), '')
+      temp_path = expanded.sub(File.expand_path(BUILD.dirname), '')
       raise "!!! Invalid file: #{raw_filename}" if expanded == temp_path
 
-      File.join(BUILD_DIR, temp_path)
+      File.join(BUILD.dirname, temp_path)
     end # def
 
     def scripts_list
-      OS.run(%(find "#{dir}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'))
+      OS.run!(%(find "#{dirname}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'))
+        .strip.split("\n")
+    end
+
+    def html_list
+      OS.run!(%(find "#{dirname}" -type f -not -path '*/base/*' -and -name '*.html.mts'))
         .strip.split("\n")
     end
 
@@ -97,7 +112,7 @@ class BUILD
       end
 
       warn "--- TS files: #{bun_files.inspect}"
-      OS.system(
+      OS.system!(
         'bun', 'build',
         '--root', '.',
         '--target', 'browser',
@@ -115,7 +130,7 @@ class BUILD
       end
     end # def
 
-    def static(files = FILES.find(BUILD_DIR))
+    def static(files = FILES.find(BUILD.dirname))
       mts_files = []
       new_files = []
       files.each do |raw_file|
@@ -140,7 +155,7 @@ class BUILD
         when %r{section/.+\.css$}
           warn "--- Compiling #{raw_file}"
           tmp_file = "#{raw_file}.tmp"
-          OS.system(%( bun x lightningcss --minify --bundle #{raw_file} -o #{tmp_file} ))
+          OS.system!(%( bun x lightningcss --minify --bundle #{raw_file} -o #{tmp_file} ))
           new_files.push raw_file
           File.rename(tmp_file, raw_file)
 
@@ -155,11 +170,36 @@ class BUILD
     end # def static_build
 
     def public_files_json
-      public_files = FILES.find(BUILD_DIR).each_with_object({}) do |fname, memo|
+      public_files = FILES.find(BUILD.dirname).each_with_object({}) do |fname, memo|
         memo[FILES.key_name(fname)] = FILES.info(fname)
       end
       File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
       warn "--- Wrote: #{PUBLIC_FILES_JSON}"
+    end # def
+
+    def settings
+      settings_json = 'settings.json'
+      Dir.chdir(BUILD.dirname) do
+        settings = JSON.parse File.read(settings_json)
+        updated = false
+        settings.each_key do |key|
+          next unless ENV.key?(key)
+
+          settings[key] = ENV[key]
+          updated = true
+        end
+
+        new_content = JSON.pretty_generate(settings)
+        if updated
+          File.write settings_json, new_content 
+          warn new_content
+          return true
+        end
+
+        false
+      end
+
+      puts File.join(BUILD.dirname, SETTINGS_JSON)
     end # def
   end # class << self
 end # class

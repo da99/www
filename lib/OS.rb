@@ -4,7 +4,7 @@ require 'open3'
 
 class OS
   class << self
-    def env(key)
+    def env!(key)
       ENV.key?(key) || raise("!!! Env key not found: #{key}")
       ENV[key]
     end
@@ -16,7 +16,7 @@ class OS
       args
     end
 
-    def system(*raw)
+    def system!(*raw)
       cmd = sanitize_cmd(raw)
       warn "--- #{cmd.inspect}"
       result = Kernel.system(*cmd)
@@ -26,7 +26,7 @@ class OS
       exit $CHILD_STATUS.exitstatus
     end
 
-    def run(*cmd)
+    def run!(*cmd)
       warn "--- #{cmd.join ' '}"
       content, err, stat = Open3.capture3(*cmd)
       warn err if err && !err.empty?

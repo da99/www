@@ -4,17 +4,15 @@
 require 'json'
 require 'English'
 require 'fileutils'
+
 require_relative '../lib/OS'
 require_relative '../lib/FILES'
 require_relative '../lib/BUILD'
+require_relative '../lib/CLI'
 
-ETAG_SIZE = 8
-BUILD_DIR = 'build'
 PUBLIC_FILES_JSON = 'build/files.json'
-SETTINGS_JSON = 'settings.json'
 NOW = Time.now.to_i
 DONT_RENAME = %r|/lib.index.[^.]{8,16}.mjs|.freeze
-
 
 # =============================================================================
 # ===================== PROCESS COMMAND ARGUMENTS =============================
@@ -25,14 +23,14 @@ prog = __FILE__.split('/').last
 
 case cmd
 when '-h', '--help', 'help'
-  puts "#{prog} -h|--help|help  --  Show this message."
-  puts "#{prog} build  settings - build/settings.json"
-  puts "#{prog} build  [file FILEPATH]"
-  puts "#{prog} upload [file FILEPATH]"
-  puts "#{prog} download pure.css to [DIR]"
-  puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
-  puts "#{prog} list scripts"
-  puts "#{prog} build scripts"
+  CLI.puts "#{prog} -h|--help|help  --  Show this message."
+  CLI.puts "#{prog} build  settings - build/settings.json"
+  CLI.puts "#{prog} build  [file FILEPATH]"
+  CLI.puts "#{prog} upload [file FILEPATH]"
+  CLI.puts "#{prog} download pure.css to [DIR]"
+  CLI.puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
+  CLI.puts "#{prog} list (scripts|html)"
+  CLI.puts "#{prog} build scripts"
 
 when /template from (.+) to (.+) with (.+)/
   tfile = Regexp.last_match(1)
@@ -59,22 +57,7 @@ when /download pure.css to (.+)/
   warn '--- No need to update: pure.css' unless FILES.download_pure_css(dir)
 
 when 'build settings'
-  Dir.chdir(BUILD_DIR) do
-    settings = JSON.parse File.read(SETTINGS_JSON)
-    updated = false
-    settings.each_key do |key|
-      next unless ENV.key?(key)
-
-      settings[key] = ENV[key]
-      updated = true
-    end
-
-    new_content = JSON.pretty_generate(settings)
-    File.write SETTINGS_JSON, new_content if updated
-    warn new_content
-  end
-
-  puts File.join(BUILD_DIR, SETTINGS_JSON)
+  BUILD.settings
 
 when 'build'
   BUILD.static
@@ -85,11 +68,11 @@ when /build file (.+)/
   end
 
 when 'build rename'
-  public_files = FILES.find(BUILD_DIR).each_with_object({}) do |fname, memo|
+  public_files = FILES.find(BUILD.dirname).each_with_object({}) do |fname, memo|
     memo[FILES.key_name(fname)] = FILES.info(fname)
   end
 
-  Dir.chdir(BUILD_DIR) do
+  Dir.chdir(BUILD.dirname) do
     public_files.each do |key, info|
       case key
       when /\.html$/
@@ -121,13 +104,14 @@ when 'build rename'
   warn "--- Wrote: #{PUBLIC_FILES_JSON}"
 
 when 'upload'
-  files = FILES.upload(FILES.find(BUILD_DIR))
+  files = FILES.upload(FILES.find(BUILD.dirname))
   puts ''
   files.each { |file| puts file }
-  # puts ''
 
 when 'list scripts'
-  FILES.scripts.each { |f| puts f }
+  BUILD.scripts_list.each { |f| puts f }
+when 'list html'
+  BUILD.html_list.each { |f| puts f }
 
 when 'build scripts'
   BUILD.scripts

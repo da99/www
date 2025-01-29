@@ -3,6 +3,8 @@
 require_relative './OS'
 
 class FILES
+  ETAG_SIZE = 8
+
   class << self
     def find(dir, ext = "-not -name '.*'")
       raw = OS.run %( find "#{dir}" -type f #{ext} )
