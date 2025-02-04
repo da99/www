@@ -29,7 +29,7 @@ when '-h', '--help', 'help'
   CLI.puts "#{prog} build  settings - build/settings.json"
   CLI.puts "#{prog} build  [file FILEPATH]"
   CLI.puts "#{prog} upload [file FILEPATH]"
-  CLI.puts "#{prog} download pure.css to [DIR]"
+  CLI.puts "#{prog} download pure.css"
   CLI.puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
   CLI.puts "#{prog} list (scripts|html)"
   CLI.puts "#{prog} build scripts"
@@ -104,9 +104,8 @@ when /template from (.+) to (.+) with (.+)/
   File.write(new_file, new_content)
   warn "--- Wrote: #{new_file}"
 
-when /download pure.css to (.+)/
-  dir = Regexp.last_match(1)
-  warn '--- No need to update: pure.css' unless FILES.download_pure_css(dir)
+when /download pure.css/
+  warn '--- No need to update: pure.css' unless BUILD.download_pure_css
 
 when 'upload'
   files = FILES.upload(FILES.find(BUILD.dirname))

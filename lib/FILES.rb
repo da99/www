@@ -7,24 +7,24 @@ class FILES
 
   class << self
     def find(dir, ext = "-not -name '.*'")
-      raw = OS.run %( find "#{dir}" -type f #{ext} )
+      raw = OS.run! %( find "#{dir}" -type f #{ext} )
       raw.strip.split("\n")
     end # def
 
     def mime_type(fname)
       raise "!!! File not found: #{fname}" unless File.exist?(fname)
 
-      results = OS.run %^ bun --eval "console.log(Bun.file('#{fname}').type)" ^
+      results = OS.run! %^ bun --eval "console.log(Bun.file('#{fname}').type)" ^
       case results
       when 'application/octet-stream'
-        OS.run(%(  file --mime "#{fname}" | cut -d':' -f2- | cut -d' ' -f2-  ))
+        OS.run!(%(  file --mime "#{fname}" | cut -d':' -f2- | cut -d' ' -f2-  ))
       else
         results
       end
     end
 
     def etag(fname)
-      OS.run(%( md5sum "#{fname}" )).strip.split.first
+      OS.run!(%( md5sum "#{fname}" )).strip.split.first
     end
 
     def add_etag_to_file_name(etag, path)
@@ -43,7 +43,7 @@ class FILES
     end
 
     def hours_age_of_file(filepath)
-      content = OS.run("stat -c %Y '#{filepath}'")
+      content = OS.run!("stat -c %Y '#{filepath}'")
       ((content.to_i - NOW) / 60).to_i
     end
 

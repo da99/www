@@ -81,17 +81,14 @@ class BUILD
       settings
     end # def
 
-    def download_pure_css(dir)
-      FileUtils.mkdir_p dir
-      Dir.chdir(dir) do
-        break false if File.exist?('pure.css') && days_age_of_file('pure.css') < 30
+    def download_pure_css
+      return false if File.exist?('pure.css') && FILES.days_age_of_file('pure.css') < 30
 
-        OS.system!(%w[wget -O pure.css https://cdn.jsdelivr.net/npm/purecss@latest/build/base-min.css])
-        OS.system!(%w[wget -O pure-grids.css https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css])
-        OS.system!(%w[wget -O reset.css https://meyerweb.com/eric/tools/css/reset/reset.css])
-        OS.system!('ls -hal')
-        true
-      end # Dir
+      OS.system!(%w[wget -O pure.css https://cdn.jsdelivr.net/npm/purecss@latest/build/base-min.css])
+      OS.system!(%w[wget -O pure-grids.css https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/grids-responsive-min.css])
+      OS.system!(%w[wget -O reset.css https://meyerweb.com/eric/tools/css/reset/reset.css])
+      OS.system!('ls -hal')
+      true
     end # def
 
     def ensure_in_build_dir(raw_filename)
