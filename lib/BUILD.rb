@@ -5,6 +5,8 @@
 #   BUCKET_NAME - Required if uploading.
 #   PUBLIC_DIR  - defaults to 'public' or 'Public'.
 class BUILD
+  SETTINGS_JSON = 'settings.json'
+
   class << self
     def bucket_name
       @bucket_name ||= OS.env('BUCKET_NAME')
@@ -71,6 +73,12 @@ class BUILD
 
       Process.wait unless pids.empty?
       uploaded_files
+    end # def
+
+    def dir
+      OS.system!(%W[rm -rf #{dirname}])
+      OS.system!(%W[cp --archive #{public_dirname} #{dirname}])
+      settings
     end # def
 
     def download_pure_css(dir)
@@ -178,9 +186,8 @@ class BUILD
     end # def
 
     def settings
-      settings_json = 'settings.json'
       Dir.chdir(BUILD.dirname) do
-        settings = JSON.parse File.read(settings_json)
+        settings = JSON.parse File.read(SETTINGS_JSON)
         updated = false
         settings.each_key do |key|
           next unless ENV.key?(key)
@@ -191,13 +198,13 @@ class BUILD
 
         new_content = JSON.pretty_generate(settings)
         if updated
-          File.write settings_json, new_content 
+          File.write SETTINGS_JSON, new_content
           warn new_content
           return true
         end
 
         false
-      end
+      end # Dir.chdir
 
       puts File.join(BUILD.dirname, SETTINGS_JSON)
     end # def

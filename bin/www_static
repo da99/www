@@ -23,7 +23,9 @@ prog = __FILE__.split('/').last
 
 case cmd
 when '-h', '--help', 'help'
+  CLI.puts 'Env: BUILD_DIR=build  PUBLIC_DIR=public'
   CLI.puts "#{prog} -h|--help|help  --  Show this message."
+  CLI.puts "#{prog} build  dir"
   CLI.puts "#{prog} build  settings - build/settings.json"
   CLI.puts "#{prog} build  [file FILEPATH]"
   CLI.puts "#{prog} upload [file FILEPATH]"
@@ -32,29 +34,8 @@ when '-h', '--help', 'help'
   CLI.puts "#{prog} list (scripts|html)"
   CLI.puts "#{prog} build scripts"
 
-when /template from (.+) to (.+) with (.+)/
-  tfile = Regexp.last_match(1)
-  tdir = Regexp.last_match(2)
-  basename = File.basename(tfile)
-  new_file = File.join(tdir, basename)
-  if File.exist?(new_file)
-    warn "--- Already exists: #{new_file}"
-    exit 0
-  end
-
-  tvals = Regexp.last_match(3).split(',').map(&:strip).map { |kv| kv.split('=').map(&:strip) }
-  tmpl = File.read(tfile)
-  FileUtils.mkdir_p(tdir)
-  new_content = tvals.each_with_object(tmpl) do |(k, v), str|
-    str.gsub!("{#{k}}", v)
-  end
-
-  File.write(new_file, new_content)
-  warn "--- Wrote: #{new_file}"
-
-when /download pure.css to (.+)/
-  dir = Regexp.last_match(1)
-  warn '--- No need to update: pure.css' unless FILES.download_pure_css(dir)
+when 'build dir'
+  BUILD.dir
 
 when 'build settings'
   BUILD.settings
@@ -102,6 +83,30 @@ when 'build rename'
 
   File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
   warn "--- Wrote: #{PUBLIC_FILES_JSON}"
+
+when /template from (.+) to (.+) with (.+)/
+  tfile = Regexp.last_match(1)
+  tdir = Regexp.last_match(2)
+  basename = File.basename(tfile)
+  new_file = File.join(tdir, basename)
+  if File.exist?(new_file)
+    warn "--- Already exists: #{new_file}"
+    exit 0
+  end
+
+  tvals = Regexp.last_match(3).split(',').map(&:strip).map { |kv| kv.split('=').map(&:strip) }
+  tmpl = File.read(tfile)
+  FileUtils.mkdir_p(tdir)
+  new_content = tvals.each_with_object(tmpl) do |(k, v), str|
+    str.gsub!("{#{k}}", v)
+  end
+
+  File.write(new_file, new_content)
+  warn "--- Wrote: #{new_file}"
+
+when /download pure.css to (.+)/
+  dir = Regexp.last_match(1)
+  warn '--- No need to update: pure.css' unless FILES.download_pure_css(dir)
 
 when 'upload'
   files = FILES.upload(FILES.find(BUILD.dirname))
