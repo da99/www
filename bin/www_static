@@ -30,7 +30,7 @@ when '-h', '--help', 'help'
   CLI.puts "#{prog} build  [file FILEPATH]"
   CLI.puts "#{prog} upload [file FILEPATH]"
   CLI.puts "#{prog} download pure.css"
-  CLI.puts "#{prog} template from [FILE} to [DIR] with (KEY=VAL,...)"
+  CLI.puts "#{prog} template [FILE} [DIR] - Uses ENV for variable k/v."
   CLI.puts "#{prog} list (scripts|html)"
   CLI.puts "#{prog} build scripts"
 
@@ -84,7 +84,7 @@ when 'build rename'
   File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
   warn "--- Wrote: #{PUBLIC_FILES_JSON}"
 
-when /template from (.+) to (.+) with (.+)/
+when /template (.+) (.+)/
   tfile = Regexp.last_match(1)
   tdir = Regexp.last_match(2)
   basename = File.basename(tfile)
@@ -94,11 +94,11 @@ when /template from (.+) to (.+) with (.+)/
     exit 0
   end
 
-  tvals = Regexp.last_match(3).split(',').map(&:strip).map { |kv| kv.split('=').map(&:strip) }
   tmpl = File.read(tfile)
   FileUtils.mkdir_p(tdir)
-  new_content = tvals.each_with_object(tmpl) do |(k, v), str|
-    str.gsub!("{#{k}}", v)
+  new_content = tmpl.gsub(/\{\{([a-zA-Z0-9_]+)\}\}/) do |_match|
+    k = Regexp.last_match(1)
+    OS.env!(k)
   end
 
   File.write(new_file, new_content)
