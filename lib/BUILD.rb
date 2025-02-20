@@ -171,7 +171,7 @@ class BUILD
 
       return new_files if mts_files.empty?
 
-      new_files.concat build_scripts(mts_files)
+      new_files.concat scripts(mts_files)
     end # def static_build
 
     def public_files_json
