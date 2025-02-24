@@ -27,6 +27,12 @@ class FILES
       OS.run!(%( md5sum "#{fname}" )).strip.split.first
     end
 
+    def ext?(fname, simple_pattern)
+      raise "Invalid pattern: #{simple_pattern.inspect}" unless simple_pattern[/^[a-z0-9\.\-\_]+$/i]
+
+      fname[/#{simple_pattern}$/]
+    end
+
     def add_etag_to_file_name(etag, path)
       return path if path[DONT_RENAME]
 
@@ -34,6 +40,10 @@ class FILES
       last = pieces.pop
       pieces.push("#{etag[0..ETAG_SIZE]}.#{last}")
       pieces.join('/')
+    end
+
+    def key_name(filename)
+      File.expand_path(filename).sub(%r{^/?(#{File.expand_path(BUILD.dirname)}|\.)/}, '')
     end
 
     def info(fname)

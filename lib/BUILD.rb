@@ -22,10 +22,6 @@ class BUILD
                           (Dir.exist?('Public') && 'Public')
     end
 
-    def key_name(filename)
-      File.expand_path(filename).sub(%r{^/?(#{File.expand_path(dirname)}|\.)/}, '')
-    end
-
     def files_uploaded_json
       @files_uploaded_json ||= "tmp/#{bucket_name}.uploaded_files.json"
     end
@@ -204,6 +200,13 @@ class BUILD
       end # Dir.chdir
 
       puts File.join(BUILD.dirname, SETTINGS_JSON)
+    end # def
+
+    def add_etag_paths(*paths)
+      FILES.find(BUILD.dirname).each do |file|
+        puts file
+        puts FILES.key_name(file)
+      end
     end # def
   end # class << self
 end # class

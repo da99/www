@@ -25,14 +25,18 @@ case cmd
 when '-h', '--help', 'help'
   CLI.puts 'Env: BUILD_DIR=build  PUBLIC_DIR=public'
   CLI.puts "#{prog} -h|--help|help  --  Show this message."
-  CLI.puts "#{prog} build  dir"
-  CLI.puts "#{prog} build  settings - build/settings.json"
-  CLI.puts "#{prog} build  [file FILEPATH]"
-  CLI.puts "#{prog} upload [file FILEPATH]"
-  CLI.puts "#{prog} download pure.css"
-  CLI.puts "#{prog} template [FILE} [DIR] - Uses ENV for variable k/v."
-  CLI.puts "#{prog} list (scripts|html)"
+  CLI.puts "#{prog} build dir"
+  CLI.puts "#{prog} build settings -- build/settings.json"
+  CLI.puts "#{prog} build (FILEPATH)"
   CLI.puts "#{prog} build scripts"
+  CLI.puts "#{prog} add_etag_paths (... .my.ext)"
+  CLI.puts "#{prog} upload (FILEPATH)"
+  CLI.puts "#{prog} download pure.css"
+  CLI.puts "#{prog} template [FILE] [DIR] - Uses ENV for variable k/v."
+  CLI.puts "#{prog} list [scripts|html]"
+
+when 'build'
+  BUILD.static
 
 when 'build dir'
   BUILD.dir
@@ -40,10 +44,10 @@ when 'build dir'
 when 'build settings'
   BUILD.settings
 
-when 'build'
-  BUILD.static
+when 'build scripts'
+  BUILD.scripts
 
-when /build file (.+)/
+when /build (.+)/
   BUILD.static([Regexp.last_match(1)]).each do |file|
     puts file
   end
@@ -114,16 +118,18 @@ when 'upload'
 
 when 'list scripts'
   BUILD.scripts_list.each { |f| puts f }
+
 when 'list html'
   BUILD.html_list.each { |f| puts f }
 
-when 'build scripts'
-  BUILD.scripts
-
-when /upload file (.+)/
+when /upload (.+)/
   files = FILES.upload([Regexp.last_match(1)])
   puts ''
   files.each { |file| puts file }
+
+when /add_etag_paths([\ a-z0-9._-]+)?/
+  paths = (Regexp.last_match(1) || '').split
+  BUILD.add_etag_paths(*paths)
 
 else
   warn "!!! Unknown command: #{cmd}"
