@@ -4,12 +4,22 @@ require_relative './OS'
 
 class FILES
   ETAG_SIZE = 8
+  VALID_EXT_CHARS = /^[a-z0-9.\-_]+$/i.freeze
 
   class << self
-    def find(dir, ext = "-not -name '.*'")
-      raw = OS.run! %( find "#{dir}" -type f #{ext} )
-      raw.strip.split("\n")
-    end # def
+
+    def script?(fpath)
+      !!fpath[/\.mjs$/]
+    end
+    # Is this a file built/compiled by Bun?
+    def built_script?(fpath)
+      !!fpath[/-[a-zA-Z0-9]{8}\.mjs$/]
+    end
+
+    # Is this a file that ends in .html.mts?
+    def html_script?(fpath)
+      !!fpath[/\.html\.mts$/]
+    end
 
     def mime_type(fname)
       raise "!!! File not found: #{fname}" unless File.exist?(fname)
@@ -24,16 +34,10 @@ class FILES
     end
 
     def etag(fname)
-      OS.run!(%( md5sum "#{fname}" )).strip.split.first
+      OS.capture!(%W[md5sum #{fname}]).strip.split.first
     end
 
-    def ext?(fname, simple_pattern)
-      raise "Invalid pattern: #{simple_pattern.inspect}" unless simple_pattern[/^[a-z0-9\.\-\_]+$/i]
-
-      fname[/#{simple_pattern}$/]
-    end
-
-    def add_etag_to_file_name(etag, path)
+    def prepend_to_file_name(etag, path)
       return path if path[DONT_RENAME]
 
       pieces = path.split('/')

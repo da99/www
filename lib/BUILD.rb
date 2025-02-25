@@ -106,7 +106,7 @@ class BUILD
         .strip.split("\n")
     end
 
-    def scripts(bun_files = FILES.scripts)
+    def scripts(bun_files = BUILD.scripts_list)
       if bun_files.empty?
         warn '--- No .mts files found.'
         return false
@@ -131,7 +131,7 @@ class BUILD
       end
     end # def
 
-    def static(files = FILES.find(BUILD.dirname))
+    def static(files = DIR.new(BUILD.dirname).files)
       mts_files = []
       new_files = []
       files.each do |raw_file|
@@ -171,7 +171,7 @@ class BUILD
     end # def static_build
 
     def public_files_json
-      public_files = FILES.find(BUILD.dirname).each_with_object({}) do |fname, memo|
+      public_files = DIR.new(BUILD.dirname).files.each_with_object({}) do |fname, memo|
         memo[FILES.key_name(fname)] = FILES.info(fname)
       end
       File.write(PUBLIC_FILES_JSON, JSON.pretty_generate(public_files))
@@ -202,10 +202,22 @@ class BUILD
       puts File.join(BUILD.dirname, SETTINGS_JSON)
     end # def
 
-    def add_etag_paths(*paths)
-      FILES.find(BUILD.dirname).each do |file|
-        puts file
-        puts FILES.key_name(file)
+    def add_etag_paths(*exts)
+      return false if exts.empty?
+
+      patterns = exts.each_with_object([]) do |raw, obj|
+        raise "Invalid pattern: #{raw}" unless raw[FILES::VALID_EXT_CHARS]
+
+        obj.concat %W[-name *#{raw} -or]
+      end
+      patterns.pop # get rid of trailing '-or'.
+
+      DIR.new(BUILD.dirname).files(patterns).each do |file|
+        next if FILES.html_script?(file) || FILES.built_script?(file)
+
+        new_file = FILES.prepend_to_file_name(FILES.etag(file), file)
+        puts new_file
+        # File.rename(file, new_file)
       end
     end # def
   end # class << self
