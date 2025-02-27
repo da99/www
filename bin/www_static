@@ -36,9 +36,6 @@ when '-h', '--help', 'help'
   CLI.puts "#{prog} template [FILE] [DIR] - Uses ENV for variable k/v."
   CLI.puts "#{prog} list [scripts|html]"
 
-when 'build'
-  BUILD.static
-
 when 'build dir'
   BUILD.dir
 
