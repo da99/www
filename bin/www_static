@@ -29,7 +29,7 @@ when '-h', '--help', 'help'
   CLI.puts "#{prog} build dir"
   CLI.puts "#{prog} build settings -- build/settings.json"
   CLI.puts "#{prog} build (FILEPATH)"
-  CLI.puts "#{prog} build scripts"
+  CLI.puts "#{prog} build .css|.mjs|.html"
   CLI.puts "#{prog} add_etag_paths (... .my.ext)"
   CLI.puts "#{prog} upload (FILEPATH)"
   CLI.puts "#{prog} download pure.css"
@@ -45,8 +45,14 @@ when 'build dir'
 when 'build settings'
   BUILD.settings
 
-when 'build scripts'
-  BUILD.scripts
+when 'build .css'
+  BUILD._css
+
+when 'build .mjs'
+  BUILD._mjs
+
+when 'build .html'
+  BUILD._html
 
 when /build (.+)/
   BUILD.static([Regexp.last_match(1)]).each do |file|

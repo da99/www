@@ -96,17 +96,29 @@ class BUILD
       File.join(BUILD.dirname, temp_path)
     end # def
 
+    def css_list
+      OS.capture!(%W[find #{dirname} -type f -not -path */base/* -and -name *.css])
+        .strip.split("\n")
+    end
+
+    def _css(files = BUILD.css_list)
+      new_files = []
+      files.each do |f|
+        warn "--- Compiling #{f}"
+        tmp_file = "#{f}.tmp"
+        OS.system!(%( bun x lightningcss --minify --bundle #{f} -o #{tmp_file} ))
+        new_files.push f
+        File.rename(tmp_file, f)
+      end
+      new_files
+    end # def
+
     def scripts_list
       OS.run!(%(find "#{dirname}" -type f -not -path '*/base/*' -and -name '*.mts' -and -not -name '*.html.mts'))
         .strip.split("\n")
     end
 
-    def html_list
-      OS.run!(%(find "#{dirname}" -type f -not -path '*/base/*' -and -name '*.html.mts'))
-        .strip.split("\n")
-    end
-
-    def scripts(bun_files = BUILD.scripts_list)
+    def _mjs(bun_files = BUILD.scripts_list)
       if bun_files.empty?
         warn '--- No .mts files found.'
         return false
@@ -131,44 +143,23 @@ class BUILD
       end
     end # def
 
-    def static(files = DIR.new(BUILD.dirname).files)
-      mts_files = []
+    def html_list
+      OS.capture!(%W[find #{dirname} -type f -not -path */base/* -and -name *.html.mts])
+        .strip.split("\n")
+    end
+
+    def _html(files = BUILD.html_list)
       new_files = []
-      files.each do |raw_file|
-        case raw_file
-        when %r{section/base/.+\.css$}
-          new_files.push raw_file
-          next
-
-        when %r{section/base/.+\.mts$}
-          new_files.push raw_file
-          next
-
-        when /\.html\.mts$/
-          new_file = raw_file.sub(/\.html\.mts$/, '.html')
-          new_files.push new_file
-          warn "--- Compiling #{raw_file} -> #{new_file}"
-          output = `bun run #{raw_file}`.strip
-          exit 2 unless $CHILD_STATUS.success?
-          File.write(new_file, output)
-          File.unlink(raw_file)
-
-        when %r{section/.+\.css$}
-          warn "--- Compiling #{raw_file}"
-          tmp_file = "#{raw_file}.tmp"
-          OS.system!(%( bun x lightningcss --minify --bundle #{raw_file} -o #{tmp_file} ))
-          new_files.push raw_file
-          File.rename(tmp_file, raw_file)
-
-        when /\.mts$/
-          mts_files.push raw_file
-        end # case
-      end # each
-
-      return new_files if mts_files.empty?
-
-      new_files.concat scripts(mts_files)
-    end # def static_build
+      files.each do |f|
+        new_file = f.sub(/\.html\.mts$/, '.html')
+        new_files.push new_file
+        warn "--- Compiling #{f} -> #{new_file}"
+        output = OS.run!("bun run #{f}").strip
+        File.write(new_file, output)
+        File.unlink(f)
+      end
+      new_files
+    end # def
 
     def public_files_json
       public_files = DIR.new(BUILD.dirname).files.each_with_object({}) do |fname, memo|
